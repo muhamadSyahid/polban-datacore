@@ -21,8 +21,10 @@
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
+    "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^10.0.0",
     "@nestjs/platform-express": "^10.0.0",
+    "@sixaphone/nestjs-drizzle": "^1.0.1",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.44.7",
     "pg": "^8.16.3",
