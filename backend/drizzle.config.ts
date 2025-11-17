@@ -1,8 +1,10 @@
 import { defineConfig } from 'drizzle-kit';
 import * as dotenv from 'dotenv';
+import * as dotenvExpand from 'dotenv-expand';
 
 if (process.env.NODE_ENV === 'development') {
-  dotenv.config({ path: '.env' });
+  const { parsed: parsedEnv } = dotenv.config({ path: '.env' });
+  dotenvExpand.expand({ processEnv: process.env, parsed: parsedEnv });
 }
 
 export default defineConfig({

@@ -1,0 +1,31 @@
+# Only for development
+# Usage
+# docker compose -f docker-compose.dev.yml up -d --build
+
+networks:
+  dataverse-net-dev:
+    driver: bridge
+
+services:
+  # DATABASES
+  dataverse-datacore_db:
+    container_name: dataverse-datacore_db-dev
+    image: postgres:18
+    environment:
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
+    ports:
+      - 5433:5432
+    networks:
+      - dataverse-net-dev
+    restart: on-failure
+
+  dataverse-datacore_redis:
+    container_name: dataverse-datacore_redis-dev
+    image: redis:8
+    ports:
+      - 6380:6379
+    networks:
+      - dataverse-net-dev
+    restart: on-failure

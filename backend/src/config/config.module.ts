@@ -9,6 +9,7 @@ import { validationSchema } from './config.schema';
       envFilePath: '.env',
       ignoreEnvFile: process.env.NODE_ENV === 'production',
       validationSchema: validationSchema,
+      expandVariables: true,
     }),
   ],
 })
