@@ -9,5 +9,5 @@ export const validationSchema = Joi.object({
   REDIS_HOST: Joi.string().required(),
   REDIS_PORT: Joi.number().required(),
 
-  DATAHUB_API_URL: Joi.string().required(),
+  DATAHUB_URL: Joi.string().required(),
 });
