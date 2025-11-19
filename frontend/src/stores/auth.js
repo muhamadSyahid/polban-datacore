@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia';
 import api from '@/services/api';
-import router from '@/router';
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -37,10 +36,9 @@ export const useAuthStore = defineStore('auth', {
           localStorage.setItem('user', JSON.stringify(user));
         }
         
-        // Redirect to dashboard
-        router.push('/dashboard');
+        return response;
       } catch (err) {
-        this.error = err.response?.data?.message || 'Login failed. Please check your credentials.';
+        // Error handling is done in the component
         throw err;
       } finally {
         this.loading = false;
@@ -51,7 +49,6 @@ export const useAuthStore = defineStore('auth', {
       this.user = null;
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      router.push('/login');
     }
   }
 });

@@ -36,10 +36,12 @@
 <script setup>
 import { ref } from 'vue';
 import { useAuthStore } from '@/stores/auth';
+import { useRouter } from 'vue-router';
 
 const username = ref('');
 const password = ref('');
 const authStore = useAuthStore();
+const router = useRouter();
 
 const handleLogin = async () => {
   if (!username.value || !password.value) {
@@ -51,9 +53,20 @@ const handleLogin = async () => {
       username: username.value,
       password: password.value
     });
+    router.push('/dashboard');
   } catch (e) {
-    // Error is handled in store state
     console.error("Login error:", e);
+    if (e.response) {
+      if (e.response.status === 401) {
+        authStore.error = "Username/Password salah";
+      } else if (e.response.status >= 500) {
+        authStore.error = "Server DataCore/DataHub tidak merespon";
+      } else {
+        authStore.error = e.response.data?.message || "Terjadi kesalahan saat login";
+      }
+    } else {
+      authStore.error = "Tidak dapat terhubung ke server";
+    }
   }
 };
 </script>
