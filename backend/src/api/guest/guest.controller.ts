@@ -11,7 +11,7 @@ import { GuestDomisiliAllDto } from './dto/guest-domisili-all.dto';
 import { ApiTags } from '@nestjs/swagger';
 
 @UseInterceptors(ClassSerializerInterceptor)
-@Controller('api/v1/guest/mahasiswa')
+@Controller('v1/guest/mahasiswa')
 @ApiTags('Guest')
 export class GuestController {
   constructor(private readonly guestService: GuestService) {}
