@@ -42,8 +42,9 @@ export class EtlService {
       await this.etlRepository.finishJobLog(jobId, 'success');
       this.logger.log(`Job ${jobName} [${jobId}] completed successfully.`);
     } catch (error) {
-      this.logger.error(`Job ${jobName} [${jobId}] failed: ${error.message}`);
-      await this.etlRepository.finishJobLog(jobId, 'failed', error.message);
+      const errorMsg = error?.message || String(error);
+      this.logger.error(`Job ${jobName} [${jobId}] failed: ${errorMsg}`);
+      await this.etlRepository.finishJobLog(jobId, 'failed', errorMsg);
       throw error;
     }
   }
@@ -89,15 +90,11 @@ export class EtlService {
 
     // 3. SLTA
     const sltaDataRaw = await this.etlRepository.aggregateSltaData();
-    const guestSltaMapped = this.groupByAndSum(sltaDataRaw, 'namaSlta').map(
-      (item) => ({
-        jenis: item.namaSlta,
-        total: item.total,
-      }),
-    );
+    const guestSltaSummed = this.groupByAndSum(sltaDataRaw, 'jenis');
+
     await this.etlRepository.saveAggregateResult(
       GUEST_CACHE_KEYS.MAHASISWA_JENIS_SLTA,
-      guestSltaMapped,
+      guestSltaSummed,
     );
     await this.etlRepository.saveAggregateResult(
       KEMAHASISWAAN_CACHE_KEYS.JENIS_SLTA,
@@ -114,13 +111,12 @@ export class EtlService {
       guestDomisiliAll,
     );
 
-    // B. Simpan Guest Domisili Per Provinsi (Group by Wilayah/Kota)
+    // B. Simpan Guest Domisili Per Provinsi (Group by Wilayah)
     const uniqueProvinces = [
       ...new Set(domisiliRaw.map((d) => d.namaProvinsi)),
     ];
 
     for (const prov of uniqueProvinces) {
-      // Filter data hanya untuk provinsi ini
       const dataProv = domisiliRaw.filter((d) => d.namaProvinsi === prov);
       const transformedProv = this.transformDomisiliForGuestProvinsi(
         prov,
@@ -156,10 +152,13 @@ export class EtlService {
   }
 
   // Helpers
-  private groupByAndSum(data: any[], keyField: string) {
+  private groupByAndSum<T extends Record<string, any>>(
+    data: T[],
+    keyField: keyof T,
+  ) {
     const map = new Map<string, number>();
     data.forEach((item) => {
-      const key = item[keyField];
+      const key = String(item[keyField]);
       const current = map.get(key) || 0;
       map.set(key, current + item.total);
     });
@@ -174,7 +173,10 @@ export class EtlService {
    * Mengelompokkan data berdasarkan Provinsi
    */
   private transformDomisiliForGuestAll(data: DomisiliAggregationResultDto[]) {
-    const provMap = new Map<string, any>();
+    const provMap = new Map<
+      string,
+      { provinsi: string; total: number; geo: { lat: number; lng: number } }
+    >();
 
     data.forEach((item) => {
       if (!provMap.has(item.namaProvinsi)) {
@@ -188,7 +190,7 @@ export class EtlService {
       entry.total += item.total;
     });
 
-    return Array.from(provMap.values());
+    return { data: Array.from(provMap.values()) };
   }
 
   /**
