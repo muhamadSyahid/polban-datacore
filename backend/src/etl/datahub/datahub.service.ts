@@ -33,6 +33,7 @@ export class DataHubService {
 
       const rawData = response.data?.data || [];
 
+      // @ts-expect-error ignore
       return plainToInstance(DataHubMahasiswaDto, rawData, {
         excludeExtraneousValues: true,
       });
