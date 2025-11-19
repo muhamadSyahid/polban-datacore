@@ -1,9 +1,13 @@
 import { Module } from '@nestjs/common';
-import { DatahubService } from './datahub.service';
-import { DatahubController } from './datahub.controller';
+import { HttpModule } from '@nestjs/axios';
+import { ConfigModule } from '@nestjs/config';
+import { DataHubService } from './datahub.service';
+import { DataHubController } from './datahub.controller';
 
 @Module({
-  controllers: [DatahubController],
-  providers: [DatahubService],
+  imports: [HttpModule, ConfigModule],
+  controllers: [DataHubController],
+  providers: [DataHubService],
+  exports: [DataHubService],
 })
-export class DatahubModule {}
+export class DataHubModule {}

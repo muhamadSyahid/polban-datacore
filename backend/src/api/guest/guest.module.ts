@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
-import { GuestRepository } from './guest.repository';
-import { GuestController } from './guest.controller';
 import { GuestService } from './guest.service';
+import { GuestController } from './guest.controller';
+import { GuestRepository } from './guest.repository';
+import { DatabaseModule } from '../../database/database.module';
 
 @Module({
-  providers: [GuestRepository, GuestService],
+  imports: [DatabaseModule],
   controllers: [GuestController],
+  providers: [GuestService, GuestRepository],
 })
 export class GuestModule {}
