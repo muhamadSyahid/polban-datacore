@@ -1,11 +1,11 @@
 import { defineStore } from 'pinia';
-import axios from 'axios';
+import api from '@/services/api';
 import router from '@/router';
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     token: localStorage.getItem('token') || null,
-    user: null,
+    user: JSON.parse(localStorage.getItem('user')) || null,
     error: null,
     loading: false
   }),
@@ -13,13 +13,19 @@ export const useAuthStore = defineStore('auth', {
     isAuthenticated: (state) => !!state.token,
   },
   actions: {
+    initializeAuth() {
+      const token = localStorage.getItem('token');
+      if (token) {
+        this.token = token;
+        // Optional: Fetch user details if needed
+        // this.fetchUser(); 
+      }
+    },
     async login(credentials) {
       this.loading = true;
       this.error = null;
       try {
-        // Assuming the backend endpoint is /api/auth/login based on standard practices
-        // You might need to adjust the base URL if it's not proxied
-        const response = await axios.post('http://localhost:3000/api/auth/login', credentials);
+        const response = await api.post('/auth/login', credentials);
         
         const { token, user } = response.data;
         
@@ -27,6 +33,9 @@ export const useAuthStore = defineStore('auth', {
         this.user = user;
         
         localStorage.setItem('token', token);
+        if (user) {
+          localStorage.setItem('user', JSON.stringify(user));
+        }
         
         // Redirect to dashboard
         router.push('/dashboard');
@@ -41,6 +50,7 @@ export const useAuthStore = defineStore('auth', {
       this.token = null;
       this.user = null;
       localStorage.removeItem('token');
+      localStorage.removeItem('user');
       router.push('/login');
     }
   }

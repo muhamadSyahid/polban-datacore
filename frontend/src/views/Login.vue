@@ -22,10 +22,11 @@
           placeholder="Enter password"
         />
       </div>
-      <div v-if="authStore.error" class="error-message">
+      <div v-if="authStore.error" class="error-message alert alert-danger">
         {{ authStore.error }}
       </div>
-      <button type="submit" :disabled="authStore.loading">
+      <button type="submit" :disabled="authStore.loading" class="login-btn">
+        <span v-if="authStore.loading" class="spinner"></span>
         {{ authStore.loading ? 'Logging in...' : 'Login' }}
       </button>
     </form>
@@ -86,14 +87,15 @@ h2 {
   box-sizing: border-box;
 }
 .error-message {
-  color: #dc3545;
+  color: #721c24;
   margin-bottom: 15px;
   text-align: center;
   padding: 10px;
   background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
   border-radius: 4px;
 }
-button {
+.login-btn {
   width: 100%;
   padding: 12px;
   background-color: #42b983;
@@ -102,12 +104,29 @@ button {
   border-radius: 4px;
   cursor: pointer;
   font-size: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
-button:disabled {
+.login-btn:disabled {
   background-color: #a0dcb6;
   cursor: not-allowed;
 }
-button:hover:not(:disabled) {
+.login-btn:hover:not(:disabled) {
   background-color: #3aa876;
+}
+.spinner {
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #fff;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  animation: spin 1s linear infinite;
+  margin-right: 10px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 </style>
