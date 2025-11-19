@@ -33,7 +33,7 @@ export class DataHubService {
 
       const rawData = response.data?.data || [];
 
-      // @ts-expect-error ignore
+      // @ts-expect-error [class-transformer type inference limitation: plainToInstance does not infer array types correctly]
       return plainToInstance(DataHubMahasiswaDto, rawData, {
         excludeExtraneousValues: true,
       });
@@ -43,10 +43,12 @@ export class DataHubService {
     }
   }
 
+  // TODO: Implement getAkademikData
   async getAkademikData(updatedSince?: Date): Promise<DataHubAkademikDto[]> {
     return [];
   }
 
+  // TODO: Implement getDosenData
   async getDosenData(updatedSince?: Date): Promise<DataHubDosenDto[]> {
     return [];
   }

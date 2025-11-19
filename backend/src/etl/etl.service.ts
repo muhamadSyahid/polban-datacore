@@ -42,8 +42,9 @@ export class EtlService {
       await this.etlRepository.finishJobLog(jobId, 'success');
       this.logger.log(`Job ${jobName} [${jobId}] completed successfully.`);
     } catch (error) {
-      this.logger.error(`Job ${jobName} [${jobId}] failed: ${error.message}`);
-      await this.etlRepository.finishJobLog(jobId, 'failed', error.message);
+      const errorMsg = error?.message || String(error);
+      this.logger.error(`Job ${jobName} [${jobId}] failed: ${errorMsg}`);
+      await this.etlRepository.finishJobLog(jobId, 'failed', errorMsg);
       throw error;
     }
   }
@@ -156,10 +157,13 @@ export class EtlService {
   }
 
   // Helpers
-  private groupByAndSum(data: any[], keyField: string) {
+  private groupByAndSum<T extends Record<string, any>>(
+    data: T[],
+    keyField: keyof T,
+  ) {
     const map = new Map<string, number>();
     data.forEach((item) => {
-      const key = item[keyField];
+      const key = String(item[keyField]);
       const current = map.get(key) || 0;
       map.set(key, current + item.total);
     });

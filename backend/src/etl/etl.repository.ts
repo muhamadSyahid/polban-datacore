@@ -87,7 +87,7 @@ export class EtlRepository {
           provinsiLat: item.provinsi?.latitude,
           provinsiLng: item.provinsi?.longitude,
 
-          datahubWilayahId: item.wilayah?.provinsiId?.toString(),
+          datahubWilayahId: item.wilayah?.wilayahId?.toString(),
           wilayahLat: item.wilayah?.latitude,
           wilayahLng: item.wilayah?.longitude,
 
@@ -104,6 +104,8 @@ export class EtlRepository {
           agama: sql`excluded.agama`,
           namaSlta: sql`excluded.nama_slta`,
           namaJalurDaftar: sql`excluded.nama_jalur_daftar`,
+          datahubProvinsiId: sql`excluded.datahub_provinsi_id`,
+          datahubWilayahId: sql`excluded.datahub_wilayah_id`,
           namaWilayah: sql`excluded.nama_wilayah`,
           namaProvinsi: sql`excluded.nama_provinsi`,
           provinsiLat: sql`excluded.provinsi_lat`,
