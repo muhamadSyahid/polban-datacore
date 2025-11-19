@@ -178,7 +178,10 @@ export class EtlService {
    * Mengelompokkan data berdasarkan Provinsi
    */
   private transformDomisiliForGuestAll(data: DomisiliAggregationResultDto[]) {
-    const provMap = new Map<string, any>();
+    const provMap = new Map<
+      string,
+      { provinsi: string; total: number; geo: { lat: number; lng: number } }
+    >();
 
     data.forEach((item) => {
       if (!provMap.has(item.namaProvinsi)) {
@@ -192,7 +195,7 @@ export class EtlService {
       entry.total += item.total;
     });
 
-    return Array.from(provMap.values());
+    return { data: Array.from(provMap.values()) };
   }
 
   /**

@@ -7,6 +7,6 @@ export class EtlController {
 
   @Get('debug/fullSync')
   async debugFullSyncAndAggregate() {
-    await this.etlService.runFullSync();
+    return await this.etlService.runFullSync();
   }
 }
