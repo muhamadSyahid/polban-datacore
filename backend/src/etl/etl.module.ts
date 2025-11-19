@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { EtlService } from './etl.service';
 import { EtlRepository } from './etl.repository';
 import { DataHubModule } from './datahub/datahub.module';
-import { DatabaseModule } from 'src/database/database.module';
+import { DatabaseModule } from '../database/database.module';
 import { EtlController } from './etl.controller'; // Uncomment if you need direct HTTP trigger without Queue (debug only)
 
 @Module({

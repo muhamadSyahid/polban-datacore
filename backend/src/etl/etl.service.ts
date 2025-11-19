@@ -6,7 +6,7 @@ import {
   GUEST_CACHE_KEYS,
   KEMAHASISWAAN_CACHE_KEYS,
   AKADEMIK_CACHE_KEYS,
-} from 'src/constants';
+} from '../constants';
 import { DomisiliAggregationResultDto } from './dto/aggregation-result.dto';
 import { toSnakeCase } from 'drizzle-orm/casing';
 

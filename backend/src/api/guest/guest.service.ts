@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { GuestRepository } from './guest.repository';
-import { GUEST_CACHE_KEYS } from 'src/constants';
+import { GUEST_CACHE_KEYS } from '../../constants';
 import { GuestDomisiliAllDto } from './dto/guest-domisili-all.dto';
 import { GuestTotalArrayDto } from './dto/guest-total-array.dto';
 

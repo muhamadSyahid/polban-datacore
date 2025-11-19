@@ -3,7 +3,7 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { lastValueFrom } from 'rxjs';
 import { plainToInstance } from 'class-transformer';
-import { DATAHUB_ENDPOINTS } from 'src/constants';
+import { DATAHUB_ENDPOINTS } from '../../constants';
 import { DataHubMahasiswaDto } from './dto/datahub-mahasiswa.dto';
 import { DataHubAkademikDto } from './dto/datahub-akademik.dto';
 import { DataHubDosenDto } from './dto/datahub-dosen.dto';

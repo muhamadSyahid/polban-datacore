@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { DRIZZLE_PROVIDER } from 'src/database/drizzle/drizzle.provider';
+import { DRIZZLE_PROVIDER } from '../database/drizzle/drizzle.provider';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import * as schema from 'src/database/drizzle/schema';
+import * as schema from '../database/drizzle/schema';
 import { desc, eq, sql } from 'drizzle-orm';
 import { CreateEtlJobLogDto } from './dto/create-etl-job-log.dto';
 import { DataHubMahasiswaDto } from './datahub/dto/datahub-mahasiswa.dto';
