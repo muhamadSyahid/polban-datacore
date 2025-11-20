@@ -8,7 +8,7 @@ export class GeoDto {
   lng: number;
 }
 
-export class GuestDomisiliItemDto {
+export class GuestDomisiliAllItemDto {
   @Expose()
   provinsi: string;
 
@@ -22,6 +22,6 @@ export class GuestDomisiliItemDto {
 
 export class GuestDomisiliAllDto {
   @Expose()
-  @Type(() => GuestDomisiliItemDto)
-  data: GuestDomisiliItemDto[];
+  @Type(() => GuestDomisiliAllItemDto)
+  data: GuestDomisiliAllItemDto[];
 }

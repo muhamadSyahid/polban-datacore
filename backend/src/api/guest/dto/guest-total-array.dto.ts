@@ -8,9 +8,6 @@ export class GuestTotalItemDto {
   agama?: string;
 
   @Expose()
-  namaSlta?: string;
-
-  @Expose()
   total: number;
 }
 
