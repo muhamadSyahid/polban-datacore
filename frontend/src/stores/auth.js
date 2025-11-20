@@ -37,9 +37,6 @@ export const useAuthStore = defineStore('auth', {
         }
         
         return response;
-      } catch (err) {
-        // Error handling is done in the component
-        throw err;
       } finally {
         this.loading = false;
       }
