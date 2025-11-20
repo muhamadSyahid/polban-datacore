@@ -5,10 +5,11 @@ import {
   Query,
   UseInterceptors,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { GuestService } from './guest.service';
 import { GuestTotalArrayDto } from './dto/guest-total-array.dto';
 import { GuestDomisiliAllDto } from './dto/guest-domisili-all.dto';
-import { ApiTags } from '@nestjs/swagger';
+import { GuestDomisiliProvinsiDto } from './dto/guest-domisili-provinsi.dto';
 
 @UseInterceptors(ClassSerializerInterceptor)
 @Controller('v1/guest/mahasiswa')
@@ -18,8 +19,7 @@ export class GuestController {
 
   @Get('gender')
   async getGender(): Promise<GuestTotalArrayDto> {
-    const data = this.guestService.getGenderData();
-    return data;
+    return this.guestService.getGenderData();
   }
 
   @Get('agama')
@@ -33,7 +33,9 @@ export class GuestController {
   }
 
   @Get('domisili')
-  async getDomisili(@Query('provinsi') provinsi?: string) {
+  async getDomisili(
+    @Query('provinsi') provinsi?: string,
+  ): Promise<GuestDomisiliAllDto | GuestDomisiliProvinsiDto> {
     if (provinsi) {
       // Mengembalikan data per provinsi (kota/kabupaten)
       return this.guestService.getDomisiliByProvinsiData(provinsi);
