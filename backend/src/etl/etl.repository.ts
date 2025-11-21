@@ -13,6 +13,8 @@ import {
   JumlahMhsAggregationResultDto,
   DomisiliAggregationResultDto,
 } from './dto/aggregation-result.dto';
+import { DataHubDosenDto } from './datahub/dto/datahub-dosen.dto';
+import { DataHubAkademikDto } from './datahub/dto/datahub-akademik.dto';
 
 @Injectable()
 export class EtlRepository {
@@ -116,6 +118,14 @@ export class EtlRepository {
           updatedAt: new Date(),
         },
       });
+  }
+
+  async saveFactDosen(data: DataHubDosenDto[]) {
+    if (data.length === 0) return;
+  }
+
+  async saveFactAkademik(data: DataHubAkademikDto[]) {
+    if (data.length === 0) return;
   }
 
   // Aggregation

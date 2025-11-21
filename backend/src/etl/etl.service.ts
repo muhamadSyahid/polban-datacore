@@ -24,47 +24,97 @@ export class EtlService {
     jobName: string = JOB_NAMES.FULL_SYNC_AND_AGGREGATE,
     triggeredBy: 'cron' | 'manual' = 'manual',
   ) {
-    const jobId = await this.etlRepository.startJobLog({
-      jobName,
-      triggeredBy,
+    await this.wrapJob(jobName, triggeredBy, async () => {
+      // 1. Sync All
+      await this.syncMahasiswaInternal();
+      await this.syncDosenInternal();
+      await this.syncAkademikInternal();
+
+      // 2. Aggregate All
+      await this.aggregateGuestDataInternal();
+      await this.aggregateKemahasiswaanDataInternal();
+      await this.aggregateAkademikDataInternal();
     });
-
-    try {
-      this.logger.log(`Starting Job ${jobName} [${jobId}]...`);
-
-      // Sync Data (ETL)
-      await this.syncMahasiswa();
-
-      // Aggregate Data (Transform & Cache)
-      // Menjalankan agregasi untuk Guest dan Internal sekaligus
-      await this.aggregateDataMahasiswa();
-
-      await this.etlRepository.finishJobLog(jobId, 'success');
-      this.logger.log(`Job ${jobName} [${jobId}] completed successfully.`);
-    } catch (error) {
-      const errorMsg = error?.message || String(error);
-      this.logger.error(`Job ${jobName} [${jobId}] failed: ${errorMsg}`);
-      await this.etlRepository.finishJobLog(jobId, 'failed', errorMsg);
-      throw error;
-    }
   }
 
-  // Sync Logic
-  async syncMahasiswa() {
+  // Sync Logic (Public Methods with Logging)
+
+  async syncMahasiswa(triggeredBy: 'cron' | 'manual' = 'manual') {
+    await this.wrapJob(JOB_NAMES.SYNC_MAHASISWA, triggeredBy, () =>
+      this.syncMahasiswaInternal(),
+    );
+  }
+
+  async syncDosen(triggeredBy: 'cron' | 'manual' = 'manual') {
+    await this.wrapJob(JOB_NAMES.SYNC_DOSEN, triggeredBy, () =>
+      this.syncDosenInternal(),
+    );
+  }
+
+  async syncAkademik(triggeredBy: 'cron' | 'manual' = 'manual') {
+    await this.wrapJob(JOB_NAMES.SYNC_AKADEMIK, triggeredBy, () =>
+      this.syncAkademikInternal(),
+    );
+  }
+
+  // Sync Logic (Internal Implementations)
+
+  private async syncMahasiswaInternal() {
     this.logger.debug('Syncing Mahasiswa data from DataHub...');
     const lastSync = await this.etlRepository.getLastSuccessfulSync(
       JOB_NAMES.SYNC_MAHASISWA,
     );
-
     const data = await this.dataHubService.getMahasiswaData(lastSync);
     await this.etlRepository.saveFactMahasiswa(data);
-
     this.logger.debug(`Synced ${data.length} mahasiswa records.`);
   }
 
-  // Aggregation Logic
-  async aggregateDataMahasiswa() {
-    this.logger.debug('Aggregating Mahasiswa Data (Guest & Internal)...');
+  private async syncDosenInternal() {
+    this.logger.debug('Syncing Dosen data from DataHub...');
+    const lastSync = await this.etlRepository.getLastSuccessfulSync(
+      JOB_NAMES.SYNC_DOSEN,
+    );
+    const data = await this.dataHubService.getDosenData(lastSync);
+    await this.etlRepository.saveFactDosen(data);
+    this.logger.debug(`Synced ${data.length} dosen records.`);
+  }
+
+  private async syncAkademikInternal() {
+    this.logger.debug('Syncing Akademik data from DataHub...');
+    const lastSync = await this.etlRepository.getLastSuccessfulSync(
+      JOB_NAMES.SYNC_AKADEMIK,
+    );
+    const data = await this.dataHubService.getAkademikData(lastSync);
+    await this.etlRepository.saveFactAkademik(data);
+    this.logger.debug(`Synced ${data.length} akademik records.`);
+  }
+
+  // Aggregation Logic (Public Methods with Logging)
+
+  async aggregateGuestData(triggeredBy: 'cron' | 'manual' = 'manual') {
+    await this.wrapJob(JOB_NAMES.AGGREGATE_GUEST_DATA, triggeredBy, () =>
+      this.aggregateGuestDataInternal(),
+    );
+  }
+
+  async aggregateKemahasiswaanData(triggeredBy: 'cron' | 'manual' = 'manual') {
+    await this.wrapJob(
+      JOB_NAMES.AGGREGATE_KEMAHASISWAAN_DATA,
+      triggeredBy,
+      () => this.aggregateKemahasiswaanDataInternal(),
+    );
+  }
+
+  async aggregateAkademikData(triggeredBy: 'cron' | 'manual' = 'manual') {
+    await this.wrapJob(JOB_NAMES.AGGREGATE_AKADEMIK_DATA, triggeredBy, () =>
+      this.aggregateAkademikDataInternal(),
+    );
+  }
+
+  // Aggregation Logic (Internal Implementations)
+
+  private async aggregateGuestDataInternal() {
+    this.logger.debug('Aggregating GUEST Data...');
 
     // 1. GENDER
     const genderDataRaw = await this.etlRepository.aggregateGenderData();
@@ -72,23 +122,8 @@ export class EtlService {
       GUEST_CACHE_KEYS.MAHASISWA_GENDER,
       this.groupByAndSum(genderDataRaw, 'jenis'),
     );
-    await this.etlRepository.saveAggregateResult(
-      KEMAHASISWAAN_CACHE_KEYS.GENDER,
-      genderDataRaw,
-    );
 
-    // 2. AGAMA
-    const agamaDataRaw = await this.etlRepository.aggregateAgamaData();
-    await this.etlRepository.saveAggregateResult(
-      GUEST_CACHE_KEYS.MAHASISWA_AGAMA,
-      this.groupByAndSum(agamaDataRaw, 'agama'),
-    );
-    await this.etlRepository.saveAggregateResult(
-      KEMAHASISWAAN_CACHE_KEYS.AGAMA,
-      agamaDataRaw,
-    );
-
-    // 3. SLTA
+    // 2. JENIS SLTA
     const sltaDataRaw = await this.etlRepository.aggregateSltaData();
     const guestSltaSummed = this.groupByAndSum(sltaDataRaw, 'jenis');
 
@@ -96,10 +131,9 @@ export class EtlService {
       GUEST_CACHE_KEYS.MAHASISWA_JENIS_SLTA,
       guestSltaSummed,
     );
-    await this.etlRepository.saveAggregateResult(
-      KEMAHASISWAAN_CACHE_KEYS.JENIS_SLTA,
-      sltaDataRaw,
-    );
+
+    // 3. RASIO DOSEN MAHASISWA
+    // TODO: RASIO DOSEN MAHASISWA AGGREGATION
 
     // 4. DOMISILI
     const domisiliRaw = await this.etlRepository.aggregateDomisiliData();
@@ -128,7 +162,18 @@ export class EtlService {
       await this.etlRepository.saveAggregateResult(cacheKey, transformedProv);
     }
 
-    // 5. JUMLAH MAHASISWA (Internal)
+    // 5. AGAMA
+    const agamaDataRaw = await this.etlRepository.aggregateAgamaData();
+    await this.etlRepository.saveAggregateResult(
+      GUEST_CACHE_KEYS.MAHASISWA_AGAMA,
+      this.groupByAndSum(agamaDataRaw, 'agama'),
+    );
+  }
+
+  private async aggregateKemahasiswaanDataInternal() {
+    this.logger.debug('Aggregating KEMAHASISWAAN Data...');
+
+    // 1. JUMLAH MAHASISWA
     const jumlahMhsRaw =
       await this.etlRepository.aggregateJumlahMahasiswaPerAngkatan();
     await this.etlRepository.saveAggregateResult(
@@ -136,7 +181,41 @@ export class EtlService {
       jumlahMhsRaw,
     );
 
-    // 6. JALUR DAFTAR (Internal)
+    // 2. GENDER
+    const genderDataRaw = await this.etlRepository.aggregateGenderData();
+    await this.etlRepository.saveAggregateResult(
+      KEMAHASISWAAN_CACHE_KEYS.GENDER,
+      genderDataRaw,
+    );
+
+    // 3. JENIS SLTA
+    const sltaDataRaw = await this.etlRepository.aggregateSltaData();
+    await this.etlRepository.saveAggregateResult(
+      KEMAHASISWAAN_CACHE_KEYS.JENIS_SLTA,
+      sltaDataRaw,
+    );
+
+    // 4. AGAMA
+    const agamaDataRaw = await this.etlRepository.aggregateAgamaData();
+    await this.etlRepository.saveAggregateResult(
+      KEMAHASISWAAN_CACHE_KEYS.AGAMA,
+      agamaDataRaw,
+    );
+  }
+
+  private async aggregateAkademikDataInternal() {
+    this.logger.debug('Aggregating AKADEMIK Data...');
+
+    // 1. DISTRIBUSI NILAI
+    // TODO: DISTRIBUSI NILAI AGGREGATION
+
+    // 2. TREN IP RATA RATA
+    // TODO: TREN IP RATA RATA AGGREGATION
+
+    // 3. TREN IP TERTINGGI
+    // TODO: TREN IP TERTINGGI AGGREGATION
+
+    // 4. JALUR DAFTAR / TIPE TES MASUK
     const jalurRaw = await this.etlRepository.aggregateJalurDaftarData();
     const tipeTesFormatted = jalurRaw.map((item) => ({
       angkatan: item.angkatan,
@@ -147,11 +226,35 @@ export class EtlService {
       AKADEMIK_CACHE_KEYS.TIPE_TES_MASUK,
       tipeTesFormatted,
     );
-
-    this.logger.debug('Mahasiswa Data aggregation completed.');
   }
 
   // Helpers
+
+  /**
+   * Membungkus eksekusi job dengan startJobLog dan finishJobLog
+   */
+  private async wrapJob(
+    jobName: string,
+    triggeredBy: 'cron' | 'manual',
+    action: () => Promise<void>,
+  ) {
+    const jobId = await this.etlRepository.startJobLog({
+      jobName,
+      triggeredBy,
+    });
+    try {
+      this.logger.log(`Starting Job ${jobName} [${jobId}]...`);
+      await action();
+      await this.etlRepository.finishJobLog(jobId, 'success');
+      this.logger.log(`Job ${jobName} [${jobId}] completed successfully.`);
+    } catch (error) {
+      const errorMsg = error?.message || String(error);
+      this.logger.error(`Job ${jobName} [${jobId}] failed: ${errorMsg}`);
+      await this.etlRepository.finishJobLog(jobId, 'failed', errorMsg);
+      throw error;
+    }
+  }
+
   private groupByAndSum<T extends Record<string, any>>(
     data: T[],
     keyField: keyof T,
