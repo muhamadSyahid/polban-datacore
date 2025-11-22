@@ -59,6 +59,7 @@ export class JobsService implements OnModuleInit {
       await this.updateSchedule({
         jobName: JOB_NAMES.FULL_SYNC_AND_AGGREGATE,
         cronExpression: '0 0 * * *',
+        description: 'Daily Full Sync & Aggregate at 00:00',
       });
     } else {
       if (existing.isActive) {

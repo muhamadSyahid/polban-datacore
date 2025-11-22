@@ -19,21 +19,22 @@ export class EtlService {
   ) {}
 
   // Orchestration / Full sync
-  async runFullSync(
-    jobName: string = JOB_NAMES.FULL_SYNC_AND_AGGREGATE,
-    triggeredBy: 'cron' | 'manual' = 'manual',
-  ) {
-    await this.wrapJob(jobName, triggeredBy, async () => {
-      // 1. Sync All
-      await this.syncMahasiswaInternal();
-      await this.syncDosenInternal();
-      await this.syncAkademikInternal();
+  async runFullSync(triggeredBy: 'cron' | 'manual' = 'manual') {
+    await this.wrapJob(
+      JOB_NAMES.FULL_SYNC_AND_AGGREGATE,
+      triggeredBy,
+      async () => {
+        // 1. Sync All
+        await this.syncMahasiswaInternal();
+        await this.syncDosenInternal();
+        await this.syncAkademikInternal();
 
-      // 2. Aggregate All
-      await this.aggregateGuestDataInternal();
-      await this.aggregateKemahasiswaanDataInternal();
-      await this.aggregateAkademikDataInternal();
-    });
+        // 2. Aggregate All
+        await this.aggregateGuestDataInternal();
+        await this.aggregateKemahasiswaanDataInternal();
+        await this.aggregateAkademikDataInternal();
+      },
+    );
   }
 
   // Sync Logic (Public Methods with Logging)

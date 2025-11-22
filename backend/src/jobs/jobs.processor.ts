@@ -23,7 +23,7 @@ export class JobsProcessor extends WorkerHost {
       // Routing
       switch (jobName) {
         case JOB_NAMES.FULL_SYNC_AND_AGGREGATE:
-          await this.etlService.runFullSync(jobName, triggeredBy);
+          await this.etlService.runFullSync(triggeredBy);
           break;
 
         case JOB_NAMES.SYNC_MAHASISWA:
