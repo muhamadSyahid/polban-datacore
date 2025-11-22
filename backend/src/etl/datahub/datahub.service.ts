@@ -38,7 +38,8 @@ export class DataHubService {
         excludeExtraneousValues: true,
       });
     } catch (error) {
-      this.logger.error(`Failed to fetch mahasiswa data from ${url}`, error);
+      const errorMsg = error?.message || String(error);
+      this.logger.error(`Failed to fetch mahasiswa data from ${url}`, errorMsg);
       throw error;
     }
   }
