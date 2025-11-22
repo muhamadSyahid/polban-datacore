@@ -9,12 +9,14 @@ import { ConfigModule } from './config/config.module';
 import { BullModule } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
     ApiModule,
     DatabaseModule,
     EtlModule,
+    AuthModule,
     JobsModule,
     ConfigModule,
     ScheduleModule.forRoot(),
