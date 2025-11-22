@@ -44,11 +44,13 @@ export class DataHubService {
   }
 
   // TODO: Implement getAkademikData
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async getAkademikData(updatedSince?: Date): Promise<DataHubAkademikDto[]> {
     return [];
   }
 
   // TODO: Implement getDosenData
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async getDosenData(updatedSince?: Date): Promise<DataHubDosenDto[]> {
     return [];
   }
