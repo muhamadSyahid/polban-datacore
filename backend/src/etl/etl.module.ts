@@ -10,6 +10,6 @@ import { AuthModule } from '../auth/auth.module';
   imports: [AuthModule, DatabaseModule, DataHubModule],
   controllers: [EtlController], // EtlController optional for debugging
   providers: [EtlService, EtlRepository],
-  exports: [EtlService],
+  exports: [EtlService, EtlRepository],
 })
 export class EtlModule {}
