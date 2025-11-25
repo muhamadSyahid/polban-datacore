@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { DRIZZLE_PROVIDER } from '../database/drizzle/drizzle.provider';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '../database/drizzle/schema';
-import { desc, eq, sql } from 'drizzle-orm';
+import { count, desc, eq, isNotNull, sql } from 'drizzle-orm';
 import { CreateEtlJobLogDto } from './dto/create-etl-job-log.dto';
 import { DataHubMahasiswaDto } from './datahub/dto/datahub-mahasiswa.dto';
 import {
@@ -13,6 +13,10 @@ import {
   JumlahMhsAggregationResultDto,
   DomisiliAggregationResultDto,
 } from './dto/aggregation-result.dto';
+import { DataHubDosenDto } from './datahub/dto/datahub-dosen.dto';
+import { DataHubAkademikDto } from './datahub/dto/datahub-akademik.dto';
+import { EtlJobLogDto } from './dto/etl-job-log.dto';
+import { JOB_NAMES } from '../constants';
 
 @Injectable()
 export class EtlRepository {
@@ -87,7 +91,7 @@ export class EtlRepository {
           provinsiLat: item.provinsi?.latitude,
           provinsiLng: item.provinsi?.longitude,
 
-          datahubWilayahId: item.wilayah?.provinsiId?.toString(),
+          datahubWilayahId: item.wilayah?.wilayahId?.toString(),
           wilayahLat: item.wilayah?.latitude,
           wilayahLng: item.wilayah?.longitude,
 
@@ -104,6 +108,8 @@ export class EtlRepository {
           agama: sql`excluded.agama`,
           namaSlta: sql`excluded.nama_slta`,
           namaJalurDaftar: sql`excluded.nama_jalur_daftar`,
+          datahubProvinsiId: sql`excluded.datahub_provinsi_id`,
+          datahubWilayahId: sql`excluded.datahub_wilayah_id`,
           namaWilayah: sql`excluded.nama_wilayah`,
           namaProvinsi: sql`excluded.nama_provinsi`,
           provinsiLat: sql`excluded.provinsi_lat`,
@@ -114,6 +120,14 @@ export class EtlRepository {
           updatedAt: new Date(),
         },
       });
+  }
+
+  async saveFactDosen(data: DataHubDosenDto[]) {
+    if (data.length === 0) return;
+  }
+
+  async saveFactAkademik(data: DataHubAkademikDto[]) {
+    if (data.length === 0) return;
   }
 
   // Aggregation
@@ -145,16 +159,24 @@ export class EtlRepository {
   }
 
   async aggregateSltaData(): Promise<SltaAggregationResultDto[]> {
-    // GROUP BY angkatan, nama_slta
+    const sltaTypeSql = sql<string>`
+        (CASE
+          WHEN UPPER(${schema.factMahasiswa.namaSlta}) SIMILAR TO '(SMK|SME|SMKN|SMKS)%' THEN 'SMK'
+          WHEN UPPER(${schema.factMahasiswa.namaSlta}) SIMILAR TO '(SMA|SPMA|SMAN|SMAS)%' THEN 'SMA'
+          WHEN UPPER(${schema.factMahasiswa.namaSlta}) SIMILAR TO '(MA|MAN|MAS)%' THEN 'MA'
+          ELSE 'Lainnya'
+        END)
+      `.as('jenis');
+
     return await this.db
       .select({
         angkatan: schema.factMahasiswa.angkatan,
-        namaSlta: schema.factMahasiswa.namaSlta,
+        jenis: sltaTypeSql,
         total: sql<number>`count(*)::int`,
       })
       .from(schema.factMahasiswa)
-      .where(sql`${schema.factMahasiswa.namaSlta} IS NOT NULL`)
-      .groupBy(schema.factMahasiswa.angkatan, schema.factMahasiswa.namaSlta);
+      .where(isNotNull(schema.factMahasiswa.namaSlta))
+      .groupBy(schema.factMahasiswa.angkatan, sltaTypeSql);
   }
 
   async aggregateJalurDaftarData(): Promise<JalurDaftarAggregationResultDto[]> {
@@ -229,5 +251,70 @@ export class EtlRepository {
           lastUpdated: new Date(),
         },
       });
+  }
+
+  // READ
+
+  async getJobLogs(limit: number, offset: number): Promise<EtlJobLogDto[]> {
+    const logs = await this.db
+      .select()
+      .from(schema.etlJobLog)
+      .orderBy(desc(schema.etlJobLog.startTime))
+      .limit(limit)
+      .offset(offset);
+
+    return logs as EtlJobLogDto[];
+  }
+
+  async getJobLogById(id: string): Promise<EtlJobLogDto | null> {
+    const result = await this.db
+      .select()
+      .from(schema.etlJobLog)
+      .where(eq(schema.etlJobLog.id, id))
+      .limit(1);
+
+    return (result[0] as EtlJobLogDto) || null;
+  }
+
+  async getLastMainJobRun(): Promise<EtlJobLogDto | null> {
+    const result = await this.db
+      .select()
+      .from(schema.etlJobLog)
+      .where(eq(schema.etlJobLog.jobName, JOB_NAMES.FULL_SYNC_AND_AGGREGATE))
+      .orderBy(desc(schema.etlJobLog.startTime))
+      .limit(1);
+
+    return result[0] || null;
+  }
+
+  async getTotalFactMahasiswa(): Promise<number> {
+    const result = await this.db
+      .select({ count: count() })
+      .from(schema.factMahasiswa);
+    return result[0].count;
+  }
+
+  async getTotalFactDosen(): Promise<number> {
+    return 0;
+  }
+
+  async getTotalFactAkademik(): Promise<number> {
+    return 0;
+  }
+
+  async getAllCacheKeys(): Promise<string[]> {
+    const result = await this.db
+      .select({ key: schema.aggrCache.cacheKey })
+      .from(schema.aggrCache);
+    return result.map((r) => r.key);
+  }
+
+  async getCacheData(key: string): Promise<any> {
+    const result = await this.db
+      .select({ data: schema.aggrCache.data })
+      .from(schema.aggrCache)
+      .where(eq(schema.aggrCache.cacheKey, key))
+      .limit(1);
+    return result[0]?.data;
   }
 }

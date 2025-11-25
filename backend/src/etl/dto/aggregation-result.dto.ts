@@ -12,7 +12,7 @@ export class AgamaAggregationResultDto {
 
 export class SltaAggregationResultDto {
   angkatan: number;
-  namaSlta: string;
+  jenis: string;
   total: number;
 }
 
