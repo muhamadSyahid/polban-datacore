@@ -15,7 +15,7 @@ import { UserRole } from '../../constants/roles.constants';
 import { Roles } from '../../common/decorators/roles.decorator';
 
 @UseInterceptors(ClassSerializerInterceptor)
-@Controller('v1/mahasiswa')
+@Controller('v1/akademik')
 @UseGuards(AuthGuard, RolesGuard)
 @Roles(UserRole.DATACORE_ADMIN, UserRole.DATAVIEW_INTERNAL)
 @ApiTags('Akademik')
