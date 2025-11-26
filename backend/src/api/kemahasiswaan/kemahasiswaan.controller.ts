@@ -15,30 +15,45 @@ import { UserRole } from '../../constants/roles.constants';
 import { Roles } from '../../common/decorators/roles.decorator';
 
 @UseInterceptors(ClassSerializerInterceptor)
-@Controller('v1/kemahasiswaan/mahasiswa')
+@Controller('v1/mahasiswa')
 @UseGuards(AuthGuard, RolesGuard)
-@Roles(UserRole.DATAVIEW_INTERNAL)
+@Roles(UserRole.DATACORE_ADMIN, UserRole.DATAVIEW_INTERNAL)
 @ApiTags('Kemahasiswaan')
 export class KemahasiswaanController {
   constructor(private readonly kemahasiswaanService: KemahasiswaanService) {}
 
-  @Get('gender')
-  async getGender(): Promise<KemahasiswaanTotalArrayDto> {
-    return this.kemahasiswaanService.getGenderData();
+  @Get('jumlah-mahasiswa')
+  async getJumlahMahasiswa(
+    @Query('angkatan') angkatan?: number,
+    @Query('prodi') prodi?: string,
+  ): Promise<KemahasiswaanTotalArrayDto> {
+    return this.kemahasiswaanService.getJumlahMahasiswaData(angkatan, prodi);
   }
 
-  @Get('agama')
-  async getAgama(): Promise<KemahasiswaanTotalArrayDto> {
-    return this.kemahasiswaanService.getAgamaData();
+  @Get('gender')
+  async getGender(
+    @Query('angkatan') angkatan?: number,
+    @Query('prodi') prodi?: string,
+    @Query('kelas') kelas?: string,
+  ): Promise<KemahasiswaanTotalArrayDto> {
+    return this.kemahasiswaanService.getGenderData(angkatan, prodi, kelas);
   }
 
   @Get('jenis-slta')
-  async getJenisSlta(): Promise<KemahasiswaanTotalArrayDto> {
-    return this.kemahasiswaanService.getJenisSltaData();
+  async getJenisSlta(
+    @Query('angkatan') angkatan?: number,
+    @Query('prodi') prodi?: string,
+    @Query('kelas') kelas?: string,
+  ): Promise<KemahasiswaanTotalArrayDto> {
+    return this.kemahasiswaanService.getJenisSltaData(angkatan, prodi, kelas);
   }
 
-  @Get('jumlah-mahasiswa')
-  async getJumlahMahasiswa(): Promise<KemahasiswaanTotalArrayDto> {
-    return this.kemahasiswaanService.getJumlahMahasiswaData();
+  @Get('agama')
+  async getAgama(
+    @Query('angkatan') angkatan?: number,
+    @Query('prodi') prodi?: string,
+    @Query('kelas') kelas?: string,
+  ): Promise<KemahasiswaanTotalArrayDto> {
+    return this.kemahasiswaanService.getAgamaData(angkatan, prodi, kelas);
   }
 }

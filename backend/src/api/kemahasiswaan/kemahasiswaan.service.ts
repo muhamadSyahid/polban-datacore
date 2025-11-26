@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { KemahasiswaanRepository } from './kemahasiswaan.repository';
 import { KEMAHASISWAAN_CACHE_KEYS } from '../../constants';
 import { KemahasiswaanTotalArrayDto } from './dto/kemahasiswaan-total-array.dto';
+import { KemahasiswaanTotalItemDto } from './dto/kemahasiswaan-total-array.dto';
 
 @Injectable()
 export class KemahasiswaanService {
@@ -20,27 +21,123 @@ export class KemahasiswaanService {
     return dataWrapper;
   }
 
-  async getGenderData(): Promise<KemahasiswaanTotalArrayDto> {
-    return this.getAndUnwrapCache(
-      KEMAHASISWAAN_CACHE_KEYS.GENDER,
-    ) as Promise<KemahasiswaanTotalArrayDto>;
+  async getJumlahMahasiswaData(
+    angkatan?: number,
+    prodi?: string,
+  ): Promise<KemahasiswaanTotalArrayDto> {
+    const cacheKey = KEMAHASISWAAN_CACHE_KEYS.JUMLAH_MAHASISWA;
+
+    const cache = await this.getAndUnwrapCache(cacheKey);
+
+    let result = cache.data as KemahasiswaanTotalItemDto[];
+
+    if (angkatan) {
+      result = result.filter((item) => item.angkatan == angkatan);
+    }
+    if (prodi) {
+      // const slug = prodi.toLowerCase().replace(/\s+/g, '_');
+      // result = result.filter((item) => {
+      //   const itemSlug = item.prodi?.toLowerCase().replace(/\s+/g, '_');
+      //   return itemSlug == slug;
+      // });
+    }
+
+    return { angkatan, prodi, data: result };
   }
 
-  async getAgamaData(): Promise<KemahasiswaanTotalArrayDto> {
-    return this.getAndUnwrapCache(
-      KEMAHASISWAAN_CACHE_KEYS.AGAMA,
-    ) as Promise<KemahasiswaanTotalArrayDto>;
+  async getGenderData(
+    angkatan?: number,
+    prodi?: string,
+    kelas?: string,
+  ): Promise<KemahasiswaanTotalArrayDto> {
+    const cacheKey = KEMAHASISWAAN_CACHE_KEYS.GENDER;
+
+    const cache = await this.getAndUnwrapCache(cacheKey);
+
+    let result = cache.data as KemahasiswaanTotalItemDto[];
+
+    if (angkatan) {
+      result = result.filter((item) => item.angkatan == angkatan);
+    }
+    if (prodi) {
+      // const slug = prodi.toLowerCase().replace(/\s+/g, '_');
+      // result = result.filter((item) => {
+      //   const itemSlug = item.prodi?.toLowerCase().replace(/\s+/g, '_');
+      //   return itemSlug == slug;
+      // });
+    }
+    if (kelas) {
+      // const slug = kelas.toLowerCase().replace(/\s+/g, '_');
+      // result = result.filter((item) => {
+      //   const itemSlug = item.kelas?.toLowerCase().replace(/\s+/g, '_');
+      //   return itemSlug == slug;
+      // });
+    }
+
+    return { angkatan, prodi, kelas, data: result };
   }
 
-  async getJenisSltaData(): Promise<KemahasiswaanTotalArrayDto> {
-    return this.getAndUnwrapCache(
-      KEMAHASISWAAN_CACHE_KEYS.JENIS_SLTA,
-    ) as Promise<KemahasiswaanTotalArrayDto>;
+  async getJenisSltaData(
+    angkatan?: number,
+    prodi?: string,
+    kelas?: string,
+  ): Promise<KemahasiswaanTotalArrayDto> {
+    const cacheKey = KEMAHASISWAAN_CACHE_KEYS.JENIS_SLTA;
+
+    const cache = await this.getAndUnwrapCache(cacheKey);
+
+    let result = cache.data as KemahasiswaanTotalItemDto[];
+
+    if (angkatan) {
+      result = result.filter((item) => item.angkatan == angkatan);
+    }
+    if (prodi) {
+      // const slug = prodi.toLowerCase().replace(/\s+/g, '_');
+      // result = result.filter((item) => {
+      //   const itemSlug = item.prodi?.toLowerCase().replace(/\s+/g, '_');
+      //   return itemSlug == slug;
+      // });
+    }
+    if (kelas) {
+      // const slug = kelas.toLowerCase().replace(/\s+/g, '_');
+      // result = result.filter((item) => {
+      //   const itemSlug = item.kelas?.toLowerCase().replace(/\s+/g, '_');
+      //   return itemSlug == slug;
+      // });
+    }
+
+    return { angkatan, prodi, kelas, data: result };
   }
 
-  async getJumlahMahasiswaData(): Promise<KemahasiswaanTotalArrayDto> {
-    return this.getAndUnwrapCache(
-      KEMAHASISWAAN_CACHE_KEYS.JUMLAH_MAHASISWA,
-    ) as Promise<KemahasiswaanTotalArrayDto>;
+  async getAgamaData(
+    angkatan?: number,
+    prodi?: string,
+    kelas?: string,
+  ): Promise<KemahasiswaanTotalArrayDto> {
+    const cacheKey = KEMAHASISWAAN_CACHE_KEYS.AGAMA;
+
+    const cache = await this.getAndUnwrapCache(cacheKey);
+
+    let result = cache.data as KemahasiswaanTotalItemDto[];
+
+    if (angkatan) {
+      result = result.filter((item) => item.angkatan == angkatan);
+    }
+    if (prodi) {
+      // const slug = prodi.toLowerCase().replace(/\s+/g, '_');
+      // result = result.filter((item) => {
+      //   const itemSlug = item.prodi?.toLowerCase().replace(/\s+/g, '_');
+      //   return itemSlug == slug;
+      // });
+    }
+    if (kelas) {
+      // const slug = kelas.toLowerCase().replace(/\s+/g, '_');
+      // result = result.filter((item) => {
+      //   const itemSlug = item.kelas?.toLowerCase().replace(/\s+/g, '_');
+      //   return itemSlug == slug;
+      // });
+    }
+
+    return { angkatan, prodi, kelas, data: result };
   }
 }

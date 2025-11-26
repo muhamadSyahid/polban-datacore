@@ -11,10 +11,25 @@ export class KemahasiswaanTotalItemDto {
   angkatan: number;
 
   @Expose()
+  prodi?: string;
+
+  @Expose()
+  kelas?: string;
+
+  @Expose()
   total: number;
 }
 
 export class KemahasiswaanTotalArrayDto {
+  @Expose()
+  angkatan: number;
+
+  @Expose()
+  prodi?: string;
+
+  @Expose()
+  kelas?: string;
+
   @Expose()
   @Type(() => KemahasiswaanTotalItemDto)
   data: KemahasiswaanTotalItemDto[];
