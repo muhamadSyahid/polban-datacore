@@ -1,6 +1,6 @@
 export enum UserRole {
   DATACORE_ADMIN = 'datacore',
-  DATAVIEW_INTERNAL = 'dataview-internal',
+  DATAVIEW_INTERNAL = 'dataview',
   // GUEST = 'guest',
 }
 

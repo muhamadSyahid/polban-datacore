@@ -15,9 +15,9 @@ import { UserRole } from '../../constants/roles.constants';
 import { Roles } from '../../common/decorators/roles.decorator';
 
 @UseInterceptors(ClassSerializerInterceptor)
-@Controller('v1/kemahasiswaan/mahasiswa')
+@Controller('v1/mahasiswa')
 @UseGuards(AuthGuard, RolesGuard)
-@Roles(UserRole.DATAVIEW_INTERNAL)
+@Roles(UserRole.DATACORE_ADMIN, UserRole.DATAVIEW_INTERNAL)
 @ApiTags('Kemahasiswaan')
 export class KemahasiswaanController {
   constructor(private readonly kemahasiswaanService: KemahasiswaanService) {}
