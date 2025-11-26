@@ -22,71 +22,38 @@ import { Roles } from '../../common/decorators/roles.decorator';
 export class KemahasiswaanController {
   constructor(private readonly kemahasiswaanService: KemahasiswaanService) {}
 
-  @Get('gender')
-  async getGender(
-    @Query('prodi') prodi?: string,
-    @Query('kelas') kelas?: string,
+  @Get('jumlah-mahasiswa')
+  async getJumlahMahasiswa(
     @Query('angkatan') angkatan?: number,
+    @Query('prodi') prodi?: string,
   ): Promise<KemahasiswaanTotalArrayDto> {
-    if (prodi) {
-      return this.kemahasiswaanService.getGenderData();
-    }
-    if (kelas) {
-      return this.kemahasiswaanService.getGenderData();
-    }
-    if (angkatan) {
-      return this.kemahasiswaanService.getGenderData(angkatan);
-    }
-    return this.kemahasiswaanService.getGenderData();
+    return this.kemahasiswaanService.getJumlahMahasiswaData(angkatan, prodi);
   }
 
-  @Get('agama')
-  async getAgama(
+  @Get('gender')
+  async getGender(
+    @Query('angkatan') angkatan?: number,
     @Query('prodi') prodi?: string,
     @Query('kelas') kelas?: string,
-    @Query('angkatan') angkatan?: number,
   ): Promise<KemahasiswaanTotalArrayDto> {
-    if (prodi) {
-      return this.kemahasiswaanService.getAgamaData();
-    }
-    if (kelas) {
-      return this.kemahasiswaanService.getAgamaData();
-    }
-    if (angkatan) {
-      return this.kemahasiswaanService.getAgamaData(angkatan);
-    }
-    return this.kemahasiswaanService.getAgamaData();
+    return this.kemahasiswaanService.getGenderData(angkatan, prodi, kelas);
   }
 
   @Get('jenis-slta')
   async getJenisSlta(
+    @Query('angkatan') angkatan?: number,
     @Query('prodi') prodi?: string,
     @Query('kelas') kelas?: string,
-    @Query('angkatan') angkatan?: number,
   ): Promise<KemahasiswaanTotalArrayDto> {
-    if (prodi) {
-      return this.kemahasiswaanService.getJenisSltaData();
-    }
-    if (kelas) {
-      return this.kemahasiswaanService.getJenisSltaData();
-    }
-    if (angkatan) {
-      return this.kemahasiswaanService.getJenisSltaData(angkatan);
-    }
-    return this.kemahasiswaanService.getJenisSltaData();
+    return this.kemahasiswaanService.getJenisSltaData(angkatan, prodi, kelas);
   }
 
-  @Get('jumlah-mahasiswa')
-  async getJumlahMahasiswa(
-    @Query('prodi') prodi?: string,
+  @Get('agama')
+  async getAgama(
     @Query('angkatan') angkatan?: number,
+    @Query('prodi') prodi?: string,
+    @Query('kelas') kelas?: string,
   ): Promise<KemahasiswaanTotalArrayDto> {
-    if (prodi) {
-      return this.kemahasiswaanService.getJumlahMahasiswaData();
-    }
-    if (angkatan) {
-      return this.kemahasiswaanService.getJumlahMahasiswaData(angkatan);
-    }
-    return this.kemahasiswaanService.getJumlahMahasiswaData();
+    return this.kemahasiswaanService.getAgamaData(angkatan, prodi, kelas);
   }
 }

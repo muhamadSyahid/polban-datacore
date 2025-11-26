@@ -21,108 +21,6 @@ export class KemahasiswaanService {
     return dataWrapper;
   }
 
-  async getGenderData(
-    angkatan?: number,
-    kelas?: string,
-    prodi?: string,
-  ): Promise<KemahasiswaanTotalArrayDto> {
-    const cacheKey = KEMAHASISWAAN_CACHE_KEYS.GENDER;
-
-    const cache = await this.getAndUnwrapCache(cacheKey);
-
-    let result = cache.data as KemahasiswaanTotalItemDto[];
-
-    if (angkatan) {
-      result = result.filter((item) => item.angkatan === angkatan);
-    }
-    if (kelas) {
-      //   const slug = prodi.toLowerCase().replace(/\s+/g, '_');
-      //   result = result.filter((item) => {
-      //     const itemSlug = item.prodi?.toLowerCase().replace(/\s+/g, '_');
-      //     return itemSlug === slug;
-      //   });
-      result = [];
-    }
-    if (prodi) {
-      //   const slug = prodi.toLowerCase().replace(/\s+/g, '_');
-      //   result = result.filter((item) => {
-      //     const itemSlug = item.prodi?.toLowerCase().replace(/\s+/g, '_');
-      //     return itemSlug === slug;
-      //   });
-      result = [];
-    }
-
-    return { data: result };
-  }
-
-  async getAgamaData(
-    angkatan?: number,
-    kelas?: string,
-    prodi?: string,
-  ): Promise<KemahasiswaanTotalArrayDto> {
-    const cacheKey = KEMAHASISWAAN_CACHE_KEYS.AGAMA;
-
-    const cache = await this.getAndUnwrapCache(cacheKey);
-
-    let result = cache.data as KemahasiswaanTotalItemDto[];
-
-    if (angkatan) {
-      result = result.filter((item) => item.angkatan === angkatan);
-    }
-    if (kelas) {
-      //   const slug = prodi.toLowerCase().replace(/\s+/g, '_');
-      //   result = result.filter((item) => {
-      //     const itemSlug = item.prodi?.toLowerCase().replace(/\s+/g, '_');
-      //     return itemSlug === slug;
-      //   });
-      result = [];
-    }
-    if (prodi) {
-      //   const slug = prodi.toLowerCase().replace(/\s+/g, '_');
-      //   result = result.filter((item) => {
-      //     const itemSlug = item.prodi?.toLowerCase().replace(/\s+/g, '_');
-      //     return itemSlug === slug;
-      //   });
-      result = [];
-    }
-
-    return { data: result };
-  }
-
-  async getJenisSltaData(
-    angkatan?: number,
-    kelas?: string,
-    prodi?: string,
-  ): Promise<KemahasiswaanTotalArrayDto> {
-    const cacheKey = KEMAHASISWAAN_CACHE_KEYS.JENIS_SLTA;
-
-    const cache = await this.getAndUnwrapCache(cacheKey);
-
-    let result = cache.data as KemahasiswaanTotalItemDto[];
-
-    if (angkatan) {
-      result = result.filter((item) => item.angkatan === angkatan);
-    }
-    if (kelas) {
-      //   const slug = prodi.toLowerCase().replace(/\s+/g, '_');
-      //   result = result.filter((item) => {
-      //     const itemSlug = item.prodi?.toLowerCase().replace(/\s+/g, '_');
-      //     return itemSlug === slug;
-      //   });
-      result = [];
-    }
-    if (prodi) {
-      //   const slug = prodi.toLowerCase().replace(/\s+/g, '_');
-      //   result = result.filter((item) => {
-      //     const itemSlug = item.prodi?.toLowerCase().replace(/\s+/g, '_');
-      //     return itemSlug === slug;
-      //   });
-      result = [];
-    }
-
-    return { data: result };
-  }
-
   async getJumlahMahasiswaData(
     angkatan?: number,
     prodi?: string,
@@ -134,17 +32,112 @@ export class KemahasiswaanService {
     let result = cache.data as KemahasiswaanTotalItemDto[];
 
     if (angkatan) {
-      result = result.filter((item) => item.angkatan === angkatan);
+      result = result.filter((item) => item.angkatan == angkatan);
     }
     if (prodi) {
-      //   const slug = prodi.toLowerCase().replace(/\s+/g, '_');
-      //   result = result.filter((item) => {
-      //     const itemSlug = item.prodi?.toLowerCase().replace(/\s+/g, '_');
-      //     return itemSlug === slug;
-      //   });
-      result = [];
+      // const slug = prodi.toLowerCase().replace(/\s+/g, '_');
+      // result = result.filter((item) => {
+      //   const itemSlug = item.prodi?.toLowerCase().replace(/\s+/g, '_');
+      //   return itemSlug == slug;
+      // });
     }
 
-    return { data: result };
+    return { angkatan, prodi, data: result };
+  }
+
+  async getGenderData(
+    angkatan?: number,
+    prodi?: string,
+    kelas?: string,
+  ): Promise<KemahasiswaanTotalArrayDto> {
+    const cacheKey = KEMAHASISWAAN_CACHE_KEYS.GENDER;
+
+    const cache = await this.getAndUnwrapCache(cacheKey);
+
+    let result = cache.data as KemahasiswaanTotalItemDto[];
+
+    if (angkatan) {
+      result = result.filter((item) => item.angkatan == angkatan);
+    }
+    if (prodi) {
+      // const slug = prodi.toLowerCase().replace(/\s+/g, '_');
+      // result = result.filter((item) => {
+      //   const itemSlug = item.prodi?.toLowerCase().replace(/\s+/g, '_');
+      //   return itemSlug == slug;
+      // });
+    }
+    if (kelas) {
+      // const slug = kelas.toLowerCase().replace(/\s+/g, '_');
+      // result = result.filter((item) => {
+      //   const itemSlug = item.kelas?.toLowerCase().replace(/\s+/g, '_');
+      //   return itemSlug == slug;
+      // });
+    }
+
+    return { angkatan, prodi, kelas, data: result };
+  }
+
+  async getJenisSltaData(
+    angkatan?: number,
+    prodi?: string,
+    kelas?: string,
+  ): Promise<KemahasiswaanTotalArrayDto> {
+    const cacheKey = KEMAHASISWAAN_CACHE_KEYS.JENIS_SLTA;
+
+    const cache = await this.getAndUnwrapCache(cacheKey);
+
+    let result = cache.data as KemahasiswaanTotalItemDto[];
+
+    if (angkatan) {
+      result = result.filter((item) => item.angkatan == angkatan);
+    }
+    if (prodi) {
+      // const slug = prodi.toLowerCase().replace(/\s+/g, '_');
+      // result = result.filter((item) => {
+      //   const itemSlug = item.prodi?.toLowerCase().replace(/\s+/g, '_');
+      //   return itemSlug == slug;
+      // });
+    }
+    if (kelas) {
+      // const slug = kelas.toLowerCase().replace(/\s+/g, '_');
+      // result = result.filter((item) => {
+      //   const itemSlug = item.kelas?.toLowerCase().replace(/\s+/g, '_');
+      //   return itemSlug == slug;
+      // });
+    }
+
+    return { angkatan, prodi, kelas, data: result };
+  }
+
+  async getAgamaData(
+    angkatan?: number,
+    prodi?: string,
+    kelas?: string,
+  ): Promise<KemahasiswaanTotalArrayDto> {
+    const cacheKey = KEMAHASISWAAN_CACHE_KEYS.AGAMA;
+
+    const cache = await this.getAndUnwrapCache(cacheKey);
+
+    let result = cache.data as KemahasiswaanTotalItemDto[];
+
+    if (angkatan) {
+      result = result.filter((item) => item.angkatan == angkatan);
+    }
+    if (prodi) {
+      // const slug = prodi.toLowerCase().replace(/\s+/g, '_');
+      // result = result.filter((item) => {
+      //   const itemSlug = item.prodi?.toLowerCase().replace(/\s+/g, '_');
+      //   return itemSlug == slug;
+      // });
+    }
+    if (kelas) {
+      // const slug = kelas.toLowerCase().replace(/\s+/g, '_');
+      // result = result.filter((item) => {
+      //   const itemSlug = item.kelas?.toLowerCase().replace(/\s+/g, '_');
+      //   return itemSlug == slug;
+      // });
+    }
+
+    return { angkatan, prodi, kelas, data: result };
   }
 }
