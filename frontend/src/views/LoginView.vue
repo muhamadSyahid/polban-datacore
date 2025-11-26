@@ -6,8 +6,8 @@
         <label for="username">Username/Email</label>
         <input 
           type="text" 
-          id="username" 
-          v-model="username" 
+          id="email"
+          v-model="username"
           required
           placeholder="Enter username or email"
           autocomplete="username"
