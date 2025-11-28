@@ -266,6 +266,13 @@ export class EtlRepository {
     return logs as EtlJobLogDto[];
   }
 
+  async getJobLogsCount(): Promise<number> {
+    const jobLogsCount = await this.db
+      .select({ count: count() })
+      .from(schema.etlJobLog);
+    return jobLogsCount[0].count;
+  }
+
   async getJobLogById(id: string): Promise<EtlJobLogDto | null> {
     const result = await this.db
       .select()

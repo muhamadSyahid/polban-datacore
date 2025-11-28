@@ -204,27 +204,27 @@ describe('EtlService', () => {
         mockEtlRepository.aggregateJalurDaftarData.mockResolvedValue([
           {
             angkatan: 2024,
-            jalur: 'SMA',
+            jalur: 'SNBT',
             total: 100,
           },
           {
             angkatan: 2023,
-            jalur: 'SMA',
+            jalur: 'SNBT',
             total: 100,
           },
           {
             angkatan: 2024,
-            jalur: 'SMK',
+            jalur: 'SMBM',
             total: 100,
           },
           {
             angkatan: 2025,
-            jalur: 'SMK',
-            total: 110,
+            jalur: 'ADIK',
+            total: 10,
           },
           {
             angkatan: 2025,
-            jalur: 'MA',
+            jalur: 'SNBP',
             total: 20,
           },
         ]);
@@ -274,9 +274,10 @@ describe('EtlService', () => {
         expect(repository.saveAggregateResult).toHaveBeenCalledWith(
           GUEST_CACHE_KEYS.AKADEMIK_TIPE_TES_MASUK,
           expect.arrayContaining([
-            expect.objectContaining({ tipe: 'SMA', total: 200 }),
-            expect.objectContaining({ tipe: 'SMK', total: 210 }),
-            expect.objectContaining({ tipe: 'MA', total: 20 }),
+            expect.objectContaining({ tipe: 'SNBT', total: 200 }),
+            expect.objectContaining({ tipe: 'SNBP', total: 20 }),
+            expect.objectContaining({ tipe: 'SMBM', total: 100 }),
+            expect.objectContaining({ tipe: 'ADIK', total: 10 }),
           ]),
         );
       });

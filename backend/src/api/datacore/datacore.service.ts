@@ -48,6 +48,7 @@ export class DataCoreService {
   ): Promise<JobHistoryListDto> {
     const offset = (page - 1) * limit;
     const data = await this.etlRepository.getJobLogs(limit, offset);
+    const allJobCount = await this.etlRepository.getJobLogsCount();
 
     const mappedData = data.map((log) => ({
       id: log.id,
@@ -65,7 +66,7 @@ export class DataCoreService {
         total: data.length,
         page,
         perPage: limit,
-        lastPage: Math.ceil(data.length / limit),
+        lastPage: Math.ceil(allJobCount / limit),
       },
     };
   }
