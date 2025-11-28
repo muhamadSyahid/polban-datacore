@@ -170,6 +170,18 @@ export class EtlService {
       GUEST_CACHE_KEYS.MAHASISWA_AGAMA,
       this.groupByAndSum(agamaDataRaw, 'agama'),
     );
+
+    // 6. JALUR DAFTAR / TIPE TES MASUK
+    const jalurRaw = await this.etlRepository.aggregateJalurDaftarData();
+    const tipeTesFormatted = jalurRaw.map((item) => ({
+      tipe: item.jalur,
+      total: item.total,
+    }));
+    const tipeTesSummed = this.groupByAndSum(tipeTesFormatted, 'tipe');
+    await this.etlRepository.saveAggregateResult(
+      GUEST_CACHE_KEYS.AKADEMIK_TIPE_TES_MASUK,
+      tipeTesSummed,
+    );
   }
 
   private async aggregateKemahasiswaanDataInternal() {

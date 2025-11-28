@@ -1,13 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { EtlService } from './etl.service';
-import { EtlRepository } from './etl.repository';
-import { DataHubService } from './datahub/datahub.service';
 import {
-  JOB_NAMES,
-  GUEST_CACHE_KEYS,
-  KEMAHASISWAAN_CACHE_KEYS,
   AKADEMIK_CACHE_KEYS,
+  GUEST_CACHE_KEYS,
+  JOB_NAMES,
+  KEMAHASISWAAN_CACHE_KEYS,
 } from '../constants';
+import { DataHubService } from './datahub/datahub.service';
+import { EtlRepository } from './etl.repository';
+import { EtlService } from './etl.service';
 
 describe('EtlService', () => {
   let service: EtlService;
@@ -201,6 +201,33 @@ describe('EtlService', () => {
             provinsiLng: 1,
           },
         ]);
+        mockEtlRepository.aggregateJalurDaftarData.mockResolvedValue([
+          {
+            angkatan: 2024,
+            jalur: 'SMA',
+            total: 100,
+          },
+          {
+            angkatan: 2023,
+            jalur: 'SMA',
+            total: 100,
+          },
+          {
+            angkatan: 2024,
+            jalur: 'SMK',
+            total: 100,
+          },
+          {
+            angkatan: 2025,
+            jalur: 'SMK',
+            total: 110,
+          },
+          {
+            angkatan: 2025,
+            jalur: 'MA',
+            total: 20,
+          },
+        ]);
 
         await service.aggregateGuestData('manual');
 
@@ -241,6 +268,16 @@ describe('EtlService', () => {
               expect.objectContaining({ kota: 'Bandung', total: 10 }),
             ]),
           }),
+        );
+
+        // Assert Jalur / Tipe Tes Masuk
+        expect(repository.saveAggregateResult).toHaveBeenCalledWith(
+          GUEST_CACHE_KEYS.AKADEMIK_TIPE_TES_MASUK,
+          expect.arrayContaining([
+            expect.objectContaining({ tipe: 'SMA', total: 200 }),
+            expect.objectContaining({ tipe: 'SMK', total: 210 }),
+            expect.objectContaining({ tipe: 'MA', total: 20 }),
+          ]),
         );
       });
     });
