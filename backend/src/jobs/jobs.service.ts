@@ -44,7 +44,7 @@ export class JobsService implements OnModuleInit {
   }
 
   async getSchedules() {
-    return this.jobsRepository.findAllSchedules();
+    return { data: await this.jobsRepository.findAllSchedules() };
   }
 
   // Helpers

@@ -7,11 +7,13 @@ import { JobsRepository } from './jobs.repository';
 import { EtlModule } from '../etl/etl.module';
 import { QUEUE_CONSTANTS } from '../constants';
 import { DatabaseModule } from '../database/database.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
     DatabaseModule,
     EtlModule,
+    AuthModule,
     BullModule.registerQueue({
       name: QUEUE_CONSTANTS.ETL_QUEUE,
     }),
