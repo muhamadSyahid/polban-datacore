@@ -16,6 +16,9 @@ export const GUEST_CACHE_KEYS = {
 
   // /api/v1/guest/mahasiswa/agama
   MAHASISWA_AGAMA: 'guest:mahasiswa:agama',
+
+  // /api/v1/guest/akademik/tipe-tes-masuk
+  AKADEMIK_TIPE_TES_MASUK: 'guest:akademik:tipe-tes-masuk',
 };
 
 export const AKADEMIK_CACHE_KEYS = {
