@@ -1,11 +1,22 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import {
+  ClassSerializerInterceptor,
+  Controller,
+  Get,
+  Param,
+  Query,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { DataCoreService } from './datacore.service';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../constants/roles.constants';
 
+@ApiTags('DataCore')
 @Controller('datacore')
+@UseInterceptors(ClassSerializerInterceptor)
 @UseGuards(AuthGuard, RolesGuard)
 @Roles(UserRole.DATACORE_ADMIN)
 export class DataCoreController {

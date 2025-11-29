@@ -37,6 +37,12 @@ export class GuestService {
     ) as Promise<GuestTotalArrayDto>;
   }
 
+  async getTipeTesMasukData(): Promise<GuestTotalArrayDto> {
+    return this.getAndUnwrapCache(
+      GUEST_CACHE_KEYS.AKADEMIK_TIPE_TES_MASUK,
+    ) as Promise<GuestTotalArrayDto>;
+  }
+
   async getDomisiliAllData(): Promise<GuestDomisiliAllDto> {
     const data = await this.getAndUnwrapCache(
       GUEST_CACHE_KEYS.MAHASISWA_DOMISILI_ALL,
