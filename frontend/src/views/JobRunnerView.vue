@@ -12,6 +12,7 @@
         </div>
 
         <div class="job-runner-container">
+          <!-- Run Job Card -->
           <div class="job-card">
             <div class="card-header">
               <h3>Jalankan Job Baru</h3>
@@ -45,6 +46,68 @@
               </button>
             </div>
           </div>
+
+          <!-- Job History Card -->
+          <div class="job-card history-card">
+            <div class="card-header">
+              <h3>Riwayat Eksekusi</h3>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="history-table">
+                  <thead>
+                    <tr>
+                      <th>Job Name</th>
+                      <th>Status</th>
+                      <th>Trigger</th>
+                      <th>Waktu Mulai</th>
+                      <th>Durasi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-if="jobStore.historyLoading">
+                      <td colspan="5" class="text-center">Memuat riwayat...</td>
+                    </tr>
+                    <tr v-else-if="jobStore.history.length === 0">
+                      <td colspan="5" class="text-center">Belum ada riwayat eksekusi.</td>
+                    </tr>
+                    <tr v-else v-for="job in jobStore.history" :key="job.id">
+                      <td>{{ job.jobName }}</td>
+                      <td>
+                        <span :class="['badge', getStatusClass(job.status)]">
+                          {{ job.status }}
+                        </span>
+                      </td>
+                      <td>{{ job.trigger || 'Manual' }}</td>
+                      <td>{{ formatDate(job.startTime) }}</td>
+                      <td>{{ formatDuration(job.duration) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              
+              <!-- Pagination -->
+              <div class="pagination-controls" v-if="jobStore.pagination.lastPage > 1">
+                <button 
+                  @click="changePage(jobStore.pagination.currentPage - 1)"
+                  :disabled="jobStore.pagination.currentPage === 1"
+                  class="btn-pagination"
+                >
+                  Previous
+                </button>
+                <span class="page-info">
+                  Page {{ jobStore.pagination.currentPage }} of {{ jobStore.pagination.lastPage }}
+                </span>
+                <button 
+                  @click="changePage(jobStore.pagination.currentPage + 1)"
+                  :disabled="jobStore.pagination.currentPage === jobStore.pagination.lastPage"
+                  class="btn-pagination"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -52,7 +115,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import AppSidebar from '@/components/Layout/AppSidebar.vue';
 import AppHeader from '@/components/Layout/AppHeader.vue';
 import { useJobStore } from '@/stores/job';
@@ -60,9 +123,46 @@ import { useJobStore } from '@/stores/job';
 const jobStore = useJobStore();
 const selectedJob = ref('');
 
+onMounted(() => {
+  jobStore.fetchHistory();
+});
+
 const handleRunJob = () => {
   if (selectedJob.value) {
     jobStore.triggerJob(selectedJob.value);
+  }
+};
+
+const changePage = (page) => {
+  jobStore.fetchHistory(page);
+};
+
+const formatDate = (dateString) => {
+  if (!dateString) return '-';
+  const date = new Date(dateString);
+  return new Intl.DateTimeFormat('id-ID', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(date);
+};
+
+const formatDuration = (seconds) => {
+  if (!seconds && seconds !== 0) return '-';
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}m ${remainingSeconds}s`;
+};
+
+const getStatusClass = (status) => {
+  switch (status?.toUpperCase()) {
+    case 'SUCCESS': return 'badge-success';
+    case 'FAILED': return 'badge-error';
+    case 'RUNNING': return 'badge-running';
+    default: return 'badge-default';
   }
 };
 </script>
@@ -103,8 +203,9 @@ const handleRunJob = () => {
 
 .job-runner-container {
   display: flex;
-  justify-content: center;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
   min-height: 50vh;
   padding-top: 2rem;
 }
@@ -114,8 +215,12 @@ const handleRunJob = () => {
   border-radius: 1rem;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
   width: 100%;
-  max-width: 500px;
+  max-width: 800px; /* Increased width for table */
   overflow: hidden;
+}
+
+.history-card {
+  margin-bottom: 2rem;
 }
 
 .card-header {
@@ -132,6 +237,109 @@ const handleRunJob = () => {
 
 .card-body {
   padding: 1.5rem;
+}
+
+.card-body.p-0 {
+  padding: 0;
+}
+
+/* Table Styles */
+.table-responsive {
+  overflow-x: auto;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.history-table th {
+  background-color: #f9fafb;
+  color: #4b5563;
+  font-weight: 600;
+  padding: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.9rem;
+}
+
+.history-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  color: #374151;
+  font-size: 0.9rem;
+}
+
+.history-table tr:hover {
+  background-color: #f9fafb;
+}
+
+.text-center {
+  text-align: center;
+}
+
+/* Badge Styles */
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge-success {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.badge-error {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.badge-running {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.badge-default {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+/* Pagination Styles */
+.pagination-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.btn-pagination {
+  padding: 0.5rem 1rem;
+  border: 1px solid #e5e7eb;
+  background-color: white;
+  border-radius: 0.375rem;
+  color: #374151;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-pagination:hover:not(:disabled) {
+  background-color: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.btn-pagination:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-info {
+  font-size: 0.875rem;
+  color: #6b7280;
 }
 
 .form-group {
