@@ -1,63 +1,58 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { GuestRepository } from './guest.repository';
-import { GUEST_CACHE_KEYS } from '../../constants';
 import { GuestDomisiliAllDto } from './dto/guest-domisili-all.dto';
 import { GuestDomisiliProvinsiDto } from './dto/guest-domisili-provinsi.dto';
 import { GuestTotalArrayDto } from './dto/guest-total-array.dto';
+import { DataTransformUtil } from '../../common/utils/data-transform.util';
 
 @Injectable()
 export class GuestService {
   constructor(private readonly guestRepository: GuestRepository) {}
 
-  private async getAndUnwrapCache(cacheKey: string) {
-    const dataWrapper = await this.guestRepository.getAggregatedData(cacheKey);
-
-    if (!dataWrapper || !dataWrapper.data) {
-      throw new NotFoundException(`Cache data not found for key: ${cacheKey}`);
-    }
-
-    return dataWrapper;
-  }
-
   async getGenderData(): Promise<GuestTotalArrayDto> {
-    return this.getAndUnwrapCache(
-      GUEST_CACHE_KEYS.MAHASISWA_GENDER,
-    ) as Promise<GuestTotalArrayDto>;
+    const rawData = await this.guestRepository.getAggregatedGenderData();
+    const summedData = DataTransformUtil.groupByAndSum(rawData, 'jenis');
+    return { data: summedData } as GuestTotalArrayDto;
   }
 
   async getAgamaData(): Promise<GuestTotalArrayDto> {
-    return this.getAndUnwrapCache(
-      GUEST_CACHE_KEYS.MAHASISWA_AGAMA,
-    ) as Promise<GuestTotalArrayDto>;
+    const rawData = await this.guestRepository.getAggregatedAgamaData();
+    const summedData = DataTransformUtil.groupByAndSum(rawData, 'agama');
+    return { data: summedData } as GuestTotalArrayDto;
   }
 
   async getJenisSltaData(): Promise<GuestTotalArrayDto> {
-    return this.getAndUnwrapCache(
-      GUEST_CACHE_KEYS.MAHASISWA_JENIS_SLTA,
-    ) as Promise<GuestTotalArrayDto>;
+    const rawData = await this.guestRepository.getAggregatedSltaData();
+    const summedData = DataTransformUtil.groupByAndSum(rawData, 'jenis');
+    return { data: summedData } as GuestTotalArrayDto;
   }
 
   async getTipeTesMasukData(): Promise<GuestTotalArrayDto> {
-    return this.getAndUnwrapCache(
-      GUEST_CACHE_KEYS.AKADEMIK_TIPE_TES_MASUK,
-    ) as Promise<GuestTotalArrayDto>;
+    const rawData = await this.guestRepository.getAggregatedJalurDaftarData();
+    const summedData = DataTransformUtil.groupByAndSum(rawData, 'tipe');
+
+    const finalData = summedData.map((item) => ({
+      jenis: item.tipe,
+      total: item.total,
+    }));
+
+    return { data: finalData } as any as GuestTotalArrayDto;
   }
 
   async getDomisiliAllData(): Promise<GuestDomisiliAllDto> {
-    const data = await this.getAndUnwrapCache(
-      GUEST_CACHE_KEYS.MAHASISWA_DOMISILI_ALL,
-    );
-    return data.data as GuestDomisiliAllDto;
+    const rawData = await this.guestRepository.getAggregatedDomisiliData();
+    return DataTransformUtil.transformDomisiliForGuestAll(rawData);
   }
 
   async getDomisiliByProvinsiData(
     provinsi: string,
   ): Promise<GuestDomisiliProvinsiDto> {
-    const keySlug = provinsi.toLowerCase().replace(/\s+/g, '_');
-    const cacheKey = `${GUEST_CACHE_KEYS.MAHASISWA_DOMISILI_PROVINSI_PREFIX}${keySlug}`;
+    const rawData =
+      await this.guestRepository.getAggregatedDomisiliData(provinsi);
 
-    const data = await this.getAndUnwrapCache(cacheKey);
-
-    return data.data as GuestDomisiliProvinsiDto;
+    return DataTransformUtil.transformDomisiliForGuestProvinsi(
+      rawData[0].namaProvinsi,
+      rawData,
+    );
   }
 }

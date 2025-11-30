@@ -1,9 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { sql } from 'drizzle-orm';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DRIZZLE_PROVIDER } from '../../database/drizzle/drizzle.provider';
 import * as schema from '../../database/drizzle/schema';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { eq } from 'drizzle-orm';
-import { AggregatedDataDto } from './dto/aggregated-data.dto';
+import {
+  MvMhsAgamaResultDto,
+  MvMhsDomisiliKotaResultDto,
+  MvMhsGenderResultDto,
+  MvMhsJalurDaftarResultDto,
+  MvMhsSltaResultDto,
+} from '../../common/dto/mv-result.dto';
 
 @Injectable()
 export class GuestRepository {
@@ -11,13 +17,34 @@ export class GuestRepository {
     @Inject(DRIZZLE_PROVIDER) private db: NodePgDatabase<typeof schema>,
   ) {}
 
-  async getAggregatedData(cacheKey: string): Promise<AggregatedDataDto> {
-    const result = await this.db
-      .select({ data: schema.aggrCache.data })
-      .from(schema.aggrCache)
-      .where(eq(schema.aggrCache.cacheKey, cacheKey))
-      .limit(1);
+  async getAggregatedGenderData(): Promise<MvMhsGenderResultDto[]> {
+    return await this.db.select().from(schema.mvMahasiswaGender);
+  }
 
-    return result[0]?.data as AggregatedDataDto;
+  async getAggregatedAgamaData(): Promise<MvMhsAgamaResultDto[]> {
+    return await this.db.select().from(schema.mvMahasiswaAgama);
+  }
+
+  async getAggregatedSltaData(): Promise<MvMhsSltaResultDto[]> {
+    return await this.db.select().from(schema.mvMahasiswaSltaKategori);
+  }
+
+  async getAggregatedDomisiliData(
+    provinsi?: string,
+  ): Promise<MvMhsDomisiliKotaResultDto[]> {
+    if (provinsi) {
+      return await this.db
+        .select()
+        .from(schema.mvMahasiswaDomisiliKota)
+        .where(
+          sql`LOWER(${schema.mvMahasiswaDomisiliKota.namaProvinsi}) = ${provinsi.toLowerCase()}`,
+        );
+    }
+
+    return await this.db.select().from(schema.mvMahasiswaDomisiliKota);
+  }
+
+  async getAggregatedJalurDaftarData(): Promise<MvMhsJalurDaftarResultDto[]> {
+    return await this.db.select().from(schema.mvMahasiswaJalurDaftar);
   }
 }
