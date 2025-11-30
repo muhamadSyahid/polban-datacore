@@ -158,7 +158,7 @@ export class EtlRepository {
     // Mengambil data lengkap agar bisa di-filter per provinsi nanti
     // Service bisa memilahnya menjadi dua jenis cache (All & Per Provinsi)
     await this.db
-      .refreshMaterializedView(schema.mvMahasiswaDomisiliKota)
+      .refreshMaterializedView(schema.mvMahasiswaDomisili)
       .concurrently();
   }
 

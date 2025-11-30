@@ -35,13 +35,13 @@ export class GuestRepository {
     if (provinsi) {
       return await this.db
         .select()
-        .from(schema.mvMahasiswaDomisiliKota)
+        .from(schema.mvMahasiswaDomisili)
         .where(
-          sql`LOWER(${schema.mvMahasiswaDomisiliKota.namaProvinsi}) = ${provinsi.toLowerCase()}`,
+          sql`LOWER(${schema.mvMahasiswaDomisili.namaProvinsi}) = ${provinsi.toLowerCase()}`,
         );
     }
 
-    return await this.db.select().from(schema.mvMahasiswaDomisiliKota);
+    return await this.db.select().from(schema.mvMahasiswaDomisili);
   }
 
   async getAggregatedJalurDaftarData(): Promise<MvMhsJalurDaftarResultDto[]> {

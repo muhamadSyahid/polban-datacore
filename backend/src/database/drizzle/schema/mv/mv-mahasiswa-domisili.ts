@@ -2,8 +2,8 @@ import { sql, isNotNull } from 'drizzle-orm';
 import { pgMaterializedView } from 'drizzle-orm/pg-core';
 import { factMahasiswa } from '../fact-mahasiswa';
 
-export const mvMahasiswaDomisiliKota = pgMaterializedView(
-  'mv_mahasiswa_domisili_kota',
+export const mvMahasiswaDomisili = pgMaterializedView(
+  'mv_mahasiswa_domisili',
 ).as((qb) => {
   return qb
     .select({

@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1763709452438,
-      "tag": "0000_create_initial_tables",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1763724873726,
-      "tag": "0001_create_job_schedules_table",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1764402471782,
-      "tag": "0002_create_mhs_materialized_views",
+      "when": 1764512553772,
+      "tag": "0000_initialization",
       "breakpoints": true
     }
   ]
