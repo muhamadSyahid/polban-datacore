@@ -150,7 +150,7 @@ export class EtlRepository {
 
   async refreshAggregatedJumlahMhsData(): Promise<void> {
     await this.db
-      .refreshMaterializedView(schema.mvMahasiswaTotalPerAngkatan)
+      .refreshMaterializedView(schema.mvMahasiswaTotal)
       .concurrently();
   }
 

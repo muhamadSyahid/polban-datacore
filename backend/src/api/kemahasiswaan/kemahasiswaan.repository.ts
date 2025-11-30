@@ -2,8 +2,12 @@ import { Inject, Injectable } from '@nestjs/common';
 import { DRIZZLE_PROVIDER } from '../../database/drizzle/drizzle.provider';
 import * as schema from '../../database/drizzle/schema';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { eq } from 'drizzle-orm';
-import { AggregatedDataDto } from './dto/aggregated-data.dto';
+import {
+  MvMhsGenderResultDto,
+  MvMhsAgamaResultDto,
+  MvMhsSltaResultDto,
+  MvMhsTotalResultDto,
+} from '../../common/dto/mv-result.dto';
 
 @Injectable()
 export class KemahasiswaanRepository {
@@ -11,13 +15,19 @@ export class KemahasiswaanRepository {
     @Inject(DRIZZLE_PROVIDER) private db: NodePgDatabase<typeof schema>,
   ) {}
 
-  async getAggregatedData(cacheKey: string): Promise<AggregatedDataDto> {
-    const result = await this.db
-      .select({ data: schema.aggrCache.data })
-      .from(schema.aggrCache)
-      .where(eq(schema.aggrCache.cacheKey, cacheKey))
-      .limit(1);
+  async getAggregatedGenderData(): Promise<MvMhsGenderResultDto[]> {
+    return await this.db.select().from(schema.mvMahasiswaGender);
+  }
 
-    return result[0]?.data as AggregatedDataDto;
+  async getAggregatedAgamaData(): Promise<MvMhsAgamaResultDto[]> {
+    return await this.db.select().from(schema.mvMahasiswaAgama);
+  }
+
+  async getAggregatedSltaData(): Promise<MvMhsSltaResultDto[]> {
+    return await this.db.select().from(schema.mvMahasiswaSltaKategori);
+  }
+
+  async getAggregatedJumlahMahasiswaData(): Promise<MvMhsTotalResultDto[]> {
+    return await this.db.select().from(schema.mvMahasiswaTotal);
   }
 }

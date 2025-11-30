@@ -12,6 +12,6 @@ export * from './fact-mahasiswa';
 export * from './mv/mv-mahasiswa-gender';
 export * from './mv/mv-mahasiswa-agama';
 export * from './mv/mv-mahasiswa-jalur-daftar';
-export * from './mv/mv-mahasiswa-total-per-angkatan';
+export * from './mv/mv-mahasiswa-total';
 export * from './mv/mv-mahasiswa-slta-kategori';
 export * from './mv/mv-mahasiswa-domisili-kota';

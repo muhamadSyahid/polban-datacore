@@ -1,6 +1,6 @@
 import { Expose, Type } from 'class-transformer';
 
-export class KemahasiswaanTotalItemDto {
+class KemahasiswaanTotalItemDto {
   @Expose()
   jenis?: string;
 

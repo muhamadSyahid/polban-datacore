@@ -2,7 +2,7 @@ import { sql } from 'drizzle-orm';
 import { pgMaterializedView } from 'drizzle-orm/pg-core';
 import { factMahasiswa } from '../fact-mahasiswa';
 
-export const mvMahasiswaTotalPerAngkatan = pgMaterializedView(
+export const mvMahasiswaTotal = pgMaterializedView(
   'mv_mahasiswa_total_per_angkatan',
 ).as((qb) => {
   return qb
