@@ -6,7 +6,7 @@ import {
   UseInterceptors,
   Version,
 } from '@nestjs/common';
-import { CacheInterceptor } from '@nestjs/cache-manager';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { ApiTags } from '@nestjs/swagger';
 import { GuestService } from './guest.service';
 import { GuestTotalArrayDto } from './dto/guest-total-array.dto';
@@ -16,6 +16,7 @@ import { GuestDomisiliProvinsiDto } from './dto/guest-domisili-provinsi.dto';
 @ApiTags('Guest')
 @Controller('guest')
 @UseInterceptors(ClassSerializerInterceptor)
+@CacheTTL(300000)
 @UseInterceptors(CacheInterceptor)
 export class GuestController {
   constructor(private readonly guestService: GuestService) {}

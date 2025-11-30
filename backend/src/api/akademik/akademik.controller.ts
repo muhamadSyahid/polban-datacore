@@ -7,7 +7,7 @@ import {
   UseGuards,
   Version,
 } from '@nestjs/common';
-import { CacheInterceptor } from '@nestjs/cache-manager';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { ApiTags } from '@nestjs/swagger';
 import { AkademikService } from './akademik.service';
 import { AkademikTotalArrayDto } from './dto/akademik-total-array.dto';
@@ -19,6 +19,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 @ApiTags('Akademik')
 @Controller('akademik')
 @UseInterceptors(ClassSerializerInterceptor)
+@CacheTTL(300000)
 @UseInterceptors(CacheInterceptor)
 @UseGuards(AuthGuard, RolesGuard)
 @Roles(UserRole.DATACORE_ADMIN, UserRole.DATAVIEW_INTERNAL)
