@@ -1,22 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { DRIZZLE_PROVIDER } from '../database/drizzle/drizzle.provider';
+import { count, desc, eq, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import * as schema from '../database/drizzle/schema';
-import { count, desc, eq, isNotNull, sql } from 'drizzle-orm';
-import { CreateEtlJobLogDto } from './dto/create-etl-job-log.dto';
-import { DataHubMahasiswaDto } from './datahub/dto/datahub-mahasiswa.dto';
-import {
-  GenderAggregationResultDto,
-  AgamaAggregationResultDto,
-  SltaAggregationResultDto,
-  JalurDaftarAggregationResultDto,
-  JumlahMhsAggregationResultDto,
-  DomisiliAggregationResultDto,
-} from './dto/aggregation-result.dto';
-import { DataHubDosenDto } from './datahub/dto/datahub-dosen.dto';
-import { DataHubAkademikDto } from './datahub/dto/datahub-akademik.dto';
-import { EtlJobLogDto } from './dto/etl-job-log.dto';
 import { JOB_NAMES } from '../constants';
+import { DRIZZLE_PROVIDER } from '../database/drizzle/drizzle.provider';
+import * as schema from '../database/drizzle/schema';
+import { DataHubAkademikDto } from './datahub/dto/datahub-akademik.dto';
+import { DataHubDosenDto } from './datahub/dto/datahub-dosen.dto';
+import { DataHubMahasiswaDto } from './datahub/dto/datahub-mahasiswa.dto';
+import { CreateEtlJobLogDto } from './dto/create-etl-job-log.dto';
+import { EtlJobLogDto } from './dto/etl-job-log.dto';
 
 @Injectable()
 export class EtlRepository {
@@ -130,109 +122,44 @@ export class EtlRepository {
     if (data.length === 0) return;
   }
 
-  // Aggregation
+  // Aggregation (REFRESH MATERIALIZED VIEWS)
 
-  async aggregateGenderData(): Promise<GenderAggregationResultDto[]> {
-    // GROUP BY angkatan, jenis_kelamin
-    return await this.db
-      .select({
-        angkatan: schema.factMahasiswa.angkatan,
-        jenis: schema.factMahasiswa.jenisKelamin,
-        total: sql<number>`count(*)::int`,
-      })
-      .from(schema.factMahasiswa)
-      .groupBy(schema.factMahasiswa.angkatan, schema.factMahasiswa.jenisKelamin)
-      .orderBy(desc(schema.factMahasiswa.angkatan));
+  async refreshAggregatedGenderData(): Promise<void> {
+    await this.db
+      .refreshMaterializedView(schema.mvMahasiswaGender)
+      .concurrently();
   }
 
-  async aggregateAgamaData(): Promise<AgamaAggregationResultDto[]> {
-    // GROUP BY angkatan, agama
-    return await this.db
-      .select({
-        angkatan: schema.factMahasiswa.angkatan,
-        agama: schema.factMahasiswa.agama,
-        total: sql<number>`count(*)::int`,
-      })
-      .from(schema.factMahasiswa)
-      .groupBy(schema.factMahasiswa.angkatan, schema.factMahasiswa.agama)
-      .orderBy(desc(schema.factMahasiswa.angkatan));
+  async refreshAggregatedAgamaData(): Promise<void> {
+    await this.db
+      .refreshMaterializedView(schema.mvMahasiswaAgama)
+      .concurrently();
   }
 
-  async aggregateSltaData(): Promise<SltaAggregationResultDto[]> {
-    const sltaTypeSql = sql<string>`
-        (CASE
-          WHEN UPPER(${schema.factMahasiswa.namaSlta}) SIMILAR TO '(SMK|SME|SMKN|SMKS)%' THEN 'SMK'
-          WHEN UPPER(${schema.factMahasiswa.namaSlta}) SIMILAR TO '(SMA|SPMA|SMAN|SMAS)%' THEN 'SMA'
-          WHEN UPPER(${schema.factMahasiswa.namaSlta}) SIMILAR TO '(MA|MAN|MAS)%' THEN 'MA'
-          ELSE 'Lainnya'
-        END)
-      `.as('jenis');
-
-    return await this.db
-      .select({
-        angkatan: schema.factMahasiswa.angkatan,
-        jenis: sltaTypeSql,
-        total: sql<number>`count(*)::int`,
-      })
-      .from(schema.factMahasiswa)
-      .where(isNotNull(schema.factMahasiswa.namaSlta))
-      .groupBy(schema.factMahasiswa.angkatan, sltaTypeSql);
+  async refreshAggregatedSltaData(): Promise<void> {
+    await this.db
+      .refreshMaterializedView(schema.mvMahasiswaSltaKategori)
+      .concurrently();
   }
 
-  async aggregateJalurDaftarData(): Promise<JalurDaftarAggregationResultDto[]> {
-    // GROUP BY angkatan, nama_jalur_daftar
-    return await this.db
-      .select({
-        angkatan: schema.factMahasiswa.angkatan,
-        jalur: schema.factMahasiswa.namaJalurDaftar,
-        total: sql<number>`count(*)::int`,
-      })
-      .from(schema.factMahasiswa)
-      .where(sql`${schema.factMahasiswa.namaJalurDaftar} IS NOT NULL`)
-      .groupBy(
-        schema.factMahasiswa.angkatan,
-        schema.factMahasiswa.namaJalurDaftar,
-      );
+  async refreshAggregatedJalurDaftarData(): Promise<void> {
+    await this.db
+      .refreshMaterializedView(schema.mvMahasiswaJalurDaftar)
+      .concurrently();
   }
 
-  async aggregateJumlahMahasiswaPerAngkatan(): Promise<
-    JumlahMhsAggregationResultDto[]
-  > {
-    // GROUP BY angkatan
-    return await this.db
-      .select({
-        angkatan: schema.factMahasiswa.angkatan,
-        total: sql<number>`count(*)::int`,
-      })
-      .from(schema.factMahasiswa)
-      .groupBy(schema.factMahasiswa.angkatan)
-      .orderBy(desc(schema.factMahasiswa.angkatan));
+  async refreshAggregatedJumlahMhsData(): Promise<void> {
+    await this.db
+      .refreshMaterializedView(schema.mvMahasiswaTotalPerAngkatan)
+      .concurrently();
   }
 
-  async aggregateDomisiliData(): Promise<DomisiliAggregationResultDto[]> {
-    // GROUP BY provinsi, wilayah (termasuk geo lat/long)
+  async refreshAggregatedDomisiliData(): Promise<void> {
     // Mengambil data lengkap agar bisa di-filter per provinsi nanti
     // Service bisa memilahnya menjadi dua jenis cache (All & Per Provinsi)
-    return await this.db
-      .select({
-        namaProvinsi: schema.factMahasiswa.namaProvinsi,
-        provinsiLat: schema.factMahasiswa.provinsiLat,
-        provinsiLng: schema.factMahasiswa.provinsiLng,
-        namaWilayah: schema.factMahasiswa.namaWilayah,
-        wilayahLat: schema.factMahasiswa.wilayahLat,
-        wilayahLng: schema.factMahasiswa.wilayahLng,
-        total: sql<number>`count(*)::int`,
-      })
-      .from(schema.factMahasiswa)
-      .where(sql`${schema.factMahasiswa.namaProvinsi} IS NOT NULL`)
-      .groupBy(
-        schema.factMahasiswa.namaProvinsi,
-        schema.factMahasiswa.provinsiLat,
-        schema.factMahasiswa.provinsiLng,
-        schema.factMahasiswa.namaWilayah,
-        schema.factMahasiswa.wilayahLat,
-        schema.factMahasiswa.wilayahLng,
-      );
+    await this.db
+      .refreshMaterializedView(schema.mvMahasiswaDomisiliKota)
+      .concurrently();
   }
 
   // Cache Saving
@@ -307,21 +234,5 @@ export class EtlRepository {
 
   async getTotalFactAkademik(): Promise<number> {
     return 0;
-  }
-
-  async getAllCacheKeys(): Promise<string[]> {
-    const result = await this.db
-      .select({ key: schema.aggrCache.cacheKey })
-      .from(schema.aggrCache);
-    return result.map((r) => r.key);
-  }
-
-  async getCacheData(key: string): Promise<any> {
-    const result = await this.db
-      .select({ data: schema.aggrCache.data })
-      .from(schema.aggrCache)
-      .where(eq(schema.aggrCache.cacheKey, key))
-      .limit(1);
-    return result[0]?.data;
   }
 }

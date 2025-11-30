@@ -1,10 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import {
-  AKADEMIK_CACHE_KEYS,
-  GUEST_CACHE_KEYS,
-  JOB_NAMES,
-  KEMAHASISWAAN_CACHE_KEYS,
-} from '../constants';
+import { JOB_NAMES } from '../constants';
 import { DataHubService } from './datahub/datahub.service';
 import { EtlRepository } from './etl.repository';
 import { EtlService } from './etl.service';
@@ -21,13 +16,12 @@ describe('EtlService', () => {
     saveFactMahasiswa: jest.fn(),
     saveFactDosen: jest.fn(),
     saveFactAkademik: jest.fn(),
-    aggregateGenderData: jest.fn(),
-    aggregateAgamaData: jest.fn(),
-    aggregateSltaData: jest.fn(),
-    aggregateDomisiliData: jest.fn(),
-    aggregateJumlahMahasiswaPerAngkatan: jest.fn(),
-    aggregateJalurDaftarData: jest.fn(),
-    saveAggregateResult: jest.fn(),
+    refreshAggregatedGenderData: jest.fn(),
+    refreshAggregatedAgamaData: jest.fn(),
+    refreshAggregatedSltaData: jest.fn(),
+    refreshAggregatedDomisiliData: jest.fn(),
+    refreshAggregatedJumlahMhsData: jest.fn(),
+    refreshAggregatedJalurDaftarData: jest.fn(),
   };
 
   const mockDataHubService = {
@@ -64,16 +58,6 @@ describe('EtlService', () => {
       mockDataHubService.getDosenData.mockResolvedValue([]);
       mockDataHubService.getAkademikData.mockResolvedValue([]);
 
-      // Mock empty arrays for aggregations
-      mockEtlRepository.aggregateGenderData.mockResolvedValue([]);
-      mockEtlRepository.aggregateAgamaData.mockResolvedValue([]);
-      mockEtlRepository.aggregateSltaData.mockResolvedValue([]);
-      mockEtlRepository.aggregateDomisiliData.mockResolvedValue([]);
-      mockEtlRepository.aggregateJumlahMahasiswaPerAngkatan.mockResolvedValue(
-        [],
-      );
-      mockEtlRepository.aggregateJalurDaftarData.mockResolvedValue([]);
-
       await service.runFullSync('manual');
 
       // 1. Check Logging
@@ -90,12 +74,12 @@ describe('EtlService', () => {
 
       // 3. Check Aggregation Calls
       // Should call ALL aggregate methods
-      expect(repository.aggregateGenderData).toHaveBeenCalled();
-      expect(repository.aggregateAgamaData).toHaveBeenCalled();
-      expect(repository.aggregateSltaData).toHaveBeenCalled();
-      expect(repository.aggregateDomisiliData).toHaveBeenCalled();
-      expect(repository.aggregateJumlahMahasiswaPerAngkatan).toHaveBeenCalled();
-      expect(repository.aggregateJalurDaftarData).toHaveBeenCalled();
+      expect(repository.refreshAggregatedGenderData).toHaveBeenCalled();
+      expect(repository.refreshAggregatedAgamaData).toHaveBeenCalled();
+      expect(repository.refreshAggregatedSltaData).toHaveBeenCalled();
+      expect(repository.refreshAggregatedDomisiliData).toHaveBeenCalled();
+      expect(repository.refreshAggregatedJumlahMhsData).toHaveBeenCalled();
+      expect(repository.refreshAggregatedJalurDaftarData).toHaveBeenCalled();
     });
 
     it('should log failure and rethrow error if any step fails', async () => {
@@ -176,163 +160,58 @@ describe('EtlService', () => {
     });
   });
 
-  describe('Aggregation Logic', () => {
+  describe('Aggregation (refresh materialized view) Logic', () => {
     describe('aggregateGuestData', () => {
-      it('should aggregate Gender, Agama, Slta (Summed), and Domisili correctly', async () => {
+      it('should refresh mv for Gender, Agama, Slta (Summed), and Domisili correctly', async () => {
         mockEtlRepository.startJobLog.mockResolvedValue('job-agg-guest');
-
-        // Mock Raw Data from Repository
-        mockEtlRepository.aggregateGenderData.mockResolvedValue([
-          { jenis: 'L', total: 10, angkatan: 2024 },
-          { jenis: 'L', total: 5, angkatan: 2023 },
-        ]);
-        mockEtlRepository.aggregateAgamaData.mockResolvedValue([
-          { agama: 'Islam', total: 100, angkatan: 2024 },
-        ]);
-        mockEtlRepository.aggregateSltaData.mockResolvedValue([
-          { jenis: 'SMA', total: 50, angkatan: 2024 },
-        ]);
-        mockEtlRepository.aggregateDomisiliData.mockResolvedValue([
-          {
-            namaProvinsi: 'Jabar',
-            namaWilayah: 'Bandung',
-            total: 10,
-            provinsiLat: 1,
-            provinsiLng: 1,
-          },
-        ]);
-        mockEtlRepository.aggregateJalurDaftarData.mockResolvedValue([
-          {
-            angkatan: 2024,
-            jalur: 'SNBT',
-            total: 100,
-          },
-          {
-            angkatan: 2023,
-            jalur: 'SNBT',
-            total: 100,
-          },
-          {
-            angkatan: 2024,
-            jalur: 'SMBM',
-            total: 100,
-          },
-          {
-            angkatan: 2025,
-            jalur: 'ADIK',
-            total: 10,
-          },
-          {
-            angkatan: 2025,
-            jalur: 'SNBP',
-            total: 20,
-          },
-        ]);
 
         await service.aggregateGuestData('manual');
 
-        // Assert Gender Summed
-        expect(repository.saveAggregateResult).toHaveBeenCalledWith(
-          GUEST_CACHE_KEYS.MAHASISWA_GENDER,
-          expect.arrayContaining([{ jenis: 'L', total: 15 }]),
-        );
+        // Assert Gender Refreshed
+        expect(repository.refreshAggregatedGenderData).toHaveBeenCalled();
 
-        // Assert Agama Summed
-        expect(repository.saveAggregateResult).toHaveBeenCalledWith(
-          GUEST_CACHE_KEYS.MAHASISWA_AGAMA,
-          expect.arrayContaining([{ agama: 'Islam', total: 100 }]),
-        );
+        // Assert Agama Refreshed
+        expect(repository.refreshAggregatedAgamaData).toHaveBeenCalled();
 
-        // Assert SLTA Summed
-        expect(repository.saveAggregateResult).toHaveBeenCalledWith(
-          GUEST_CACHE_KEYS.MAHASISWA_JENIS_SLTA,
-          expect.arrayContaining([{ jenis: 'SMA', total: 50 }]),
-        );
+        // Assert SLTA Refreshed
+        expect(repository.refreshAggregatedSltaData).toHaveBeenCalled();
 
-        // Assert Domisili All
-        expect(repository.saveAggregateResult).toHaveBeenCalledWith(
-          GUEST_CACHE_KEYS.MAHASISWA_DOMISILI_ALL,
-          expect.objectContaining({
-            data: expect.arrayContaining([
-              expect.objectContaining({ provinsi: 'Jabar', total: 10 }),
-            ]),
-          }),
-        );
+        // Assert Domisili Refreshed
+        expect(repository.refreshAggregatedDomisiliData).toHaveBeenCalled();
 
-        // Assert Domisili Per Provinsi (Snake Case Key)
-        expect(repository.saveAggregateResult).toHaveBeenCalledWith(
-          `${GUEST_CACHE_KEYS.MAHASISWA_DOMISILI_PROVINSI_PREFIX}jabar`,
-          expect.objectContaining({
-            provinsi: 'Jabar',
-            data: expect.arrayContaining([
-              expect.objectContaining({ kota: 'Bandung', total: 10 }),
-            ]),
-          }),
-        );
-
-        // Assert Jalur / Tipe Tes Masuk
-        expect(repository.saveAggregateResult).toHaveBeenCalledWith(
-          GUEST_CACHE_KEYS.AKADEMIK_TIPE_TES_MASUK,
-          expect.arrayContaining([
-            expect.objectContaining({ tipe: 'SNBT', total: 200 }),
-            expect.objectContaining({ tipe: 'SNBP', total: 20 }),
-            expect.objectContaining({ tipe: 'SMBM', total: 100 }),
-            expect.objectContaining({ tipe: 'ADIK', total: 10 }),
-          ]),
-        );
+        // Assert Jalur / Tipe Tes Masuk Refreshed
+        expect(repository.refreshAggregatedJalurDaftarData).toHaveBeenCalled();
       });
     });
 
     describe('aggregateKemahasiswaanData', () => {
-      it('should aggregate internal data (granular) correctly', async () => {
+      it('should refresh mv for internal data (granular) correctly', async () => {
         mockEtlRepository.startJobLog.mockResolvedValue('job-agg-mhs');
-
-        const rawGender = [{ jenis: 'L', total: 10, angkatan: 2024 }];
-        const rawAgama = [{ agama: 'Islam', total: 50, angkatan: 2024 }];
-        const rawSlta = [{ jenis: 'SMK', total: 20, angkatan: 2024 }];
-        const rawJumlah = [{ angkatan: 2024, total: 100 }];
-
-        mockEtlRepository.aggregateGenderData.mockResolvedValue(rawGender);
-        mockEtlRepository.aggregateAgamaData.mockResolvedValue(rawAgama);
-        mockEtlRepository.aggregateSltaData.mockResolvedValue(rawSlta);
-        mockEtlRepository.aggregateJumlahMahasiswaPerAngkatan.mockResolvedValue(
-          rawJumlah,
-        );
 
         await service.aggregateKemahasiswaanData('cron');
 
-        expect(repository.saveAggregateResult).toHaveBeenCalledWith(
-          KEMAHASISWAAN_CACHE_KEYS.GENDER,
-          rawGender,
-        );
-        expect(repository.saveAggregateResult).toHaveBeenCalledWith(
-          KEMAHASISWAAN_CACHE_KEYS.AGAMA,
-          rawAgama,
-        );
-        expect(repository.saveAggregateResult).toHaveBeenCalledWith(
-          KEMAHASISWAAN_CACHE_KEYS.JENIS_SLTA,
-          rawSlta,
-        );
-        expect(repository.saveAggregateResult).toHaveBeenCalledWith(
-          KEMAHASISWAAN_CACHE_KEYS.JUMLAH_MAHASISWA,
-          rawJumlah,
-        );
+        // Assert Gender Refreshed
+        expect(repository.refreshAggregatedGenderData).toHaveBeenCalled();
+
+        // Assert Agama Refreshed
+        expect(repository.refreshAggregatedAgamaData).toHaveBeenCalled();
+
+        // Assert SLTA Refreshed
+        expect(repository.refreshAggregatedSltaData).toHaveBeenCalled();
+
+        // Assert Jumlah Mahasiswa Refreshed
+        expect(repository.refreshAggregatedJumlahMhsData).toHaveBeenCalled();
       });
     });
 
     describe('aggregateAkademikData', () => {
-      it('should aggregate akademik data correctly', async () => {
+      it('should refresh mv for akademik data correctly', async () => {
         mockEtlRepository.startJobLog.mockResolvedValue('job-agg-akd');
-
-        const rawJalur = [{ jalur: 'SNBP', total: 100, angkatan: 2024 }];
-        mockEtlRepository.aggregateJalurDaftarData.mockResolvedValue(rawJalur);
 
         await service.aggregateAkademikData('manual');
 
-        expect(repository.saveAggregateResult).toHaveBeenCalledWith(
-          AKADEMIK_CACHE_KEYS.TIPE_TES_MASUK,
-          [{ angkatan: 2024, tipe: 'SNBP', total: 100 }], // Check mapping 'jalur' -> 'tipe'
-        );
+        // Assert Jalur / Tipe Tes Masuk Refreshed
+        expect(repository.refreshAggregatedJalurDaftarData).toHaveBeenCalled();
       });
     });
   });
