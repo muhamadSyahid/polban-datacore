@@ -5,7 +5,7 @@ export class AkademikTotalItemDto {
   tipe?: string;
 
   @Expose()
-  angkatan: number;
+  angkatan?: number;
 
   @Expose()
   prodi?: string;
@@ -19,7 +19,10 @@ export class AkademikTotalItemDto {
 
 export class AkademikTotalArrayDto {
   @Expose()
-  angkatan: number;
+  angkatan?: number;
+
+  @Expose()
+  semester?: number;
 
   @Expose()
   prodi?: string;

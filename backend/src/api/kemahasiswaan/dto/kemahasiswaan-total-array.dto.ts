@@ -8,7 +8,7 @@ class KemahasiswaanTotalItemDto {
   agama?: string;
 
   @Expose()
-  angkatan: number;
+  angkatan?: number;
 
   @Expose()
   prodi?: string;
@@ -22,7 +22,7 @@ class KemahasiswaanTotalItemDto {
 
 export class KemahasiswaanTotalArrayDto {
   @Expose()
-  angkatan: number;
+  angkatan?: number;
 
   @Expose()
   prodi?: string;

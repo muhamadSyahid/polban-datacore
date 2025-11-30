@@ -1,52 +1,90 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotImplementedException } from '@nestjs/common';
 import { AkademikRepository } from './akademik.repository';
-import { AKADEMIK_CACHE_KEYS } from '../../constants';
 import { AkademikTotalArrayDto } from './dto/akademik-total-array.dto';
-import { AkademikTotalItemDto } from './dto/akademik-total-array.dto';
 
 @Injectable()
 export class AkademikService {
   constructor(private readonly akademikRepository: AkademikRepository) {}
 
-  private async getAndUnwrapCache(cacheKey: string) {
-    const dataWrapper =
-      await this.akademikRepository.getAggregatedData(cacheKey);
-
-    if (!dataWrapper || !dataWrapper.data) {
-      throw new NotFoundException(`Cache data not found for key: ${cacheKey}`);
-    }
-
-    return dataWrapper;
-  }
   async getTipeTesMasukData(
     angkatan?: number,
     prodi?: string,
     kelas?: string,
   ): Promise<AkademikTotalArrayDto> {
-    const cacheKey = AKADEMIK_CACHE_KEYS.TIPE_TES_MASUK;
-
-    const cache = await this.getAndUnwrapCache(cacheKey);
-
-    let result = cache.data as AkademikTotalItemDto[];
+    let result = await this.akademikRepository.getAggregatedJalurDaftarData();
 
     if (angkatan) {
-      result = result.filter((item) => item.angkatan == angkatan);
+      result = result
+        .filter((item) => item.angkatan == angkatan)
+        .map((item) => ({ ...item, angkatan: undefined }));
     }
     if (prodi) {
       // const slug = prodi.toLowerCase().replace(/\s+/g, '_');
-      // result = result.filter((item) => {
-      //   const itemSlug = item.prodi?.toLowerCase().replace(/\s+/g, '_');
-      //   return itemSlug == slug;
-      // });
+      // result = result
+      //   .filter((item) => {
+      //     const itemSlug = item.prodi?.toLowerCase().replace(/\s+/g, '_');
+      //     return itemSlug == slug;
+      //   })
+      //   .map((item) => ({ ...item, prodi: undefined }));
     }
     if (kelas) {
       // const slug = kelas.toLowerCase().replace(/\s+/g, '_');
-      // result = result.filter((item) => {
-      //   const itemSlug = item.kelas?.toLowerCase().replace(/\s+/g, '_');
-      //   return itemSlug == slug;
-      // });
+      // result = result
+      //   .filter((item) => {
+      //     const itemSlug = item.kelas?.toLowerCase().replace(/\s+/g, '_');
+      //     return itemSlug == slug;
+      //   })
+      //   .map((item) => ({ ...item, kelas: undefined }));
     }
 
     return { angkatan, prodi, kelas, data: result };
+  }
+
+  async getDistribusiNilaiData(
+    angkatan?: number,
+    prodi?: string,
+  ): Promise<AkademikTotalArrayDto> {
+    let result =
+      await this.akademikRepository.getAggregatedDistribusiNilaiData();
+
+    if (angkatan) {
+      result = result
+        .filter((item) => item.angkatan == angkatan)
+        .map((item) => ({ ...item, angkatan: undefined }));
+    }
+    if (prodi) {
+      // const slug = prodi.toLowerCase().replace(/\s+/g, '_');
+      // result = result
+      //   .filter((item) => {
+      //     const itemSlug = item.prodi?.toLowerCase().replace(/\s+/g, '_');
+      //     return itemSlug == slug;
+      //   })
+      //   .map((item) => ({ ...item, prodi: undefined }));
+    }
+
+    return { angkatan, prodi, data: result };
+  }
+
+  async getTrenIpRataRataData(
+    angkatan?: number,
+  ): Promise<AkademikTotalArrayDto> {
+    let result =
+      await this.akademikRepository.getAggregatedTrenIpRataRataData();
+
+    if (angkatan) {
+      result = result
+        .filter((item) => item.angkatan == angkatan)
+        .map((item) => ({ ...item, angkatan: undefined }));
+    }
+    return { angkatan, data: result };
+  }
+
+  async getTrenIpTertinggiData(
+    semester?: number,
+    angkatan?: number,
+  ): Promise<AkademikTotalArrayDto> {
+    throw new NotImplementedException();
+
+    return { angkatan, semester, data: [] };
   }
 }
