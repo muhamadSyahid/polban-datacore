@@ -162,24 +162,6 @@ export class EtlRepository {
       .concurrently();
   }
 
-  // Cache Saving
-  async saveAggregateResult(key: string, data: any) {
-    return await this.db
-      .insert(schema.aggrCache)
-      .values({
-        cacheKey: key,
-        data: { data },
-        lastUpdated: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: schema.aggrCache.cacheKey,
-        set: {
-          data: { data },
-          lastUpdated: new Date(),
-        },
-      });
-  }
-
   // READ
 
   async getJobLogs(limit: number, offset: number): Promise<EtlJobLogDto[]> {
