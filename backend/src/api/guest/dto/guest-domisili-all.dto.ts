@@ -8,7 +8,7 @@ export class GeoDto {
   lng: number;
 }
 
-export class GuestDomisiliAllItemDto {
+class GuestDomisiliAllItemDto {
   @Expose()
   provinsi: string;
 

@@ -35,4 +35,30 @@ export class AkademikController {
   ): Promise<AkademikTotalArrayDto> {
     return this.akademikService.getTipeTesMasukData(angkatan, prodi, kelas);
   }
+
+  @Version('1')
+  @Get('distribusi-nilai')
+  async getDistribusiNilai(
+    @Query('angkatan') angkatan?: number,
+    @Query('prodi') prodi?: string,
+  ): Promise<AkademikTotalArrayDto> {
+    return this.akademikService.getDistribusiNilaiData(angkatan, prodi);
+  }
+
+  @Version('1')
+  @Get('tren-ip-rata-rata')
+  async getTrenIpRataRata(
+    @Query('angkatan') angkatan?: number,
+  ): Promise<AkademikTotalArrayDto> {
+    return this.akademikService.getTrenIpRataRataData(angkatan);
+  }
+
+  @Version('1')
+  @Get('tren-ip-tertinggi')
+  async getTrenIpTertinggi(
+    @Query('semester') semester?: number,
+    @Query('angkatan') angkatan?: number,
+  ): Promise<AkademikTotalArrayDto> {
+    return this.akademikService.getTrenIpTertinggiData(semester, angkatan);
+  }
 }

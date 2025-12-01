@@ -1,7 +1,7 @@
 import { Expose, Type } from 'class-transformer';
 import { GeoDto } from './guest-domisili-all.dto';
 
-export class GuestDomisiliProvinsiItemDto {
+class GuestDomisiliProvinsiItemDto {
   @Expose()
   kota: string;
 

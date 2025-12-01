@@ -1,6 +1,6 @@
 import { Expose, Type } from 'class-transformer';
 
-export class KemahasiswaanTotalItemDto {
+class KemahasiswaanTotalItemDto {
   @Expose()
   jenis?: string;
 
@@ -8,7 +8,7 @@ export class KemahasiswaanTotalItemDto {
   agama?: string;
 
   @Expose()
-  angkatan: number;
+  angkatan?: number;
 
   @Expose()
   prodi?: string;
@@ -22,7 +22,7 @@ export class KemahasiswaanTotalItemDto {
 
 export class KemahasiswaanTotalArrayDto {
   @Expose()
-  angkatan: number;
+  angkatan?: number;
 
   @Expose()
   prodi?: string;

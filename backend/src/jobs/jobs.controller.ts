@@ -4,7 +4,7 @@ import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateScheduleDto } from './dto/schedule-job.dto';
 import { AuthGuard } from '../common/guards/auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
-import { UserRole } from '../constants/roles.constants';
+import { UserRole } from '../constants';
 import { Roles } from '../common/decorators/roles.decorator';
 
 @Controller('jobs')

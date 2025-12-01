@@ -2,6 +2,7 @@ import {
   ClassSerializerInterceptor,
   Controller,
   Get,
+  NotImplementedException,
   Query,
   UseInterceptors,
   Version,
@@ -56,5 +57,12 @@ export class GuestController {
   @Get('akademik/tipe-tes-masuk')
   async getTipeTesMasuk(): Promise<GuestTotalArrayDto> {
     return this.guestService.getTipeTesMasukData();
-  } // TODO: Rasio Dosen Mhs
+  }
+
+  // TODO: Rasio Dosen Mhs
+  @Version('1')
+  @Get('mahasiswa/rasio-dosen-mhs')
+  async getRasioDosenMhs() {
+    throw new NotImplementedException();
+  }
 }

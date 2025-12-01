@@ -2,7 +2,7 @@ import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { DataHubService } from './datahub.service';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
-import { UserRole } from '../../constants/roles.constants';
+import { UserRole } from '../../constants';
 import { Roles } from '../../common/decorators/roles.decorator';
 
 @Controller('etl/datahub')
