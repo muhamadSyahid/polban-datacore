@@ -7,8 +7,11 @@
       
       <div class="content-body">
         <div class="inspector-container">
-          <!-- Left Panel: Sidebar List -->
+          <!-- Left Panel: Views List -->
           <div class="inspector-sidebar">
+            <div class="sidebar-header">
+              <h3 class="sidebar-title">Materialized Views</h3>
+            </div>
             <div class="search-box">
               <div class="search-input-wrapper">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="search-icon"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
@@ -16,43 +19,70 @@
                   type="text" 
                   v-model="searchQuery" 
                   @input="handleSearch" 
-                  placeholder="Cari Data..." 
+                  placeholder="Cari View..." 
                   class="search-input"
                 />
               </div>
             </div>
             
-            <div class="keys-list">
-              <div v-if="inspectorStore.loading && !inspectorStore.keys.length" class="loading-state">
+            <div class="views-list">
+              <div v-if="inspectorStore.loading && !inspectorStore.views.length" class="loading-state">
                 <div class="spinner-sm"></div>
-                <span>Memuat keys...</span>
+                <span>Memuat views...</span>
               </div>
               
-              <div v-else-if="inspectorStore.filteredKeys.length === 0" class="empty-state">
-                <span>Tidak ada data ditemukan</span>
+              <div v-else-if="inspectorStore.filteredViews.length === 0" class="empty-state">
+                <span>Tidak ada view ditemukan</span>
               </div>
               
               <button 
-                v-for="key in inspectorStore.filteredKeys" 
-                :key="key"
-                @click="handleSelectKey(key)"
-                class="key-item"
-                :class="{ 'active': inspectorStore.selectedKey === key }"
+                v-for="view in inspectorStore.filteredViews" 
+                :key="view"
+                @click="handleSelectView(view)"
+                class="view-item"
+                :class="{ 'active': inspectorStore.selectedView === view }"
               >
-                <span class="key-text">{{ key }}</span>
+                <div class="view-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                </div>
+                <span class="view-text">{{ view }}</span>
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="chevron-icon"><polyline points="9 18 15 12 9 6"></polyline></svg>
               </button>
             </div>
           </div>
 
-          <!-- Right Panel: Preview -->
+          <!-- Right Panel: Data Preview -->
           <div class="inspector-preview">
             <div class="preview-header">
-              <h3 class="preview-title">
-                <span v-if="inspectorStore.selectedKey">{{ inspectorStore.selectedKey }}</span>
-                <span v-else class="placeholder-title">Data Inspector</span>
-              </h3>
-              <div v-if="inspectorStore.selectedKey" class="actions">
+              <div class="header-left">
+                <h3 class="preview-title">
+                  <span v-if="inspectorStore.selectedView">{{ inspectorStore.selectedView }}</span>
+                  <span v-else class="placeholder-title">Data Inspector</span>
+                </h3>
+                <span v-if="inspectorStore.hasData" class="row-count">
+                  {{ inspectorStore.rowCount }} baris
+                </span>
+              </div>
+              <div v-if="inspectorStore.selectedView" class="header-actions">
+                <!-- View Mode Toggle -->
+                <div class="view-toggle">
+                  <button 
+                    @click="viewMode = 'table'" 
+                    class="toggle-btn"
+                    :class="{ 'active': viewMode === 'table' }"
+                    title="Tampilan Tabel"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line></svg>
+                  </button>
+                  <button 
+                    @click="viewMode = 'json'" 
+                    class="toggle-btn"
+                    :class="{ 'active': viewMode === 'json' }"
+                    title="Tampilan JSON"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                  </button>
+                </div>
                 <button @click="handleRefresh" class="action-btn" title="Refresh Data">
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
                 </button>
@@ -60,21 +90,43 @@
             </div>
 
             <div class="preview-body">
-              <div v-if="inspectorStore.loading && inspectorStore.selectedKey" class="loading-overlay">
+              <div v-if="inspectorStore.loading && inspectorStore.selectedView" class="loading-overlay">
                 <div class="spinner"></div>
                 <p>Mengambil data...</p>
               </div>
 
-              <div v-else-if="inspectorStore.jsonData" class="json-viewer">
-                <pre><code>{{ JSON.stringify(inspectorStore.jsonData, null, 2) }}</code></pre>
+              <!-- Table View (Default) -->
+              <div v-else-if="inspectorStore.hasData && viewMode === 'table'" class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th v-for="header in inspectorStore.headers" :key="header">
+                        {{ formatHeader(header) }}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(row, index) in inspectorStore.tableData" :key="index">
+                      <td v-for="header in inspectorStore.headers" :key="header">
+                        {{ formatCellValue(row[header]) }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
 
+              <!-- JSON View -->
+              <div v-else-if="inspectorStore.hasData && viewMode === 'json'" class="json-viewer">
+                <pre><code>{{ JSON.stringify(inspectorStore.tableData, null, 2) }}</code></pre>
+              </div>
+
+              <!-- Empty State -->
               <div v-else class="empty-preview">
                 <div class="empty-icon">
                   <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
                 </div>
-                <h3>Pilih data di sidebar</h3>
-                <p>Pilih salah satu key cache di sebelah kiri untuk melihat detail data JSON.</p>
+                <h3>Pilih Materialized View</h3>
+                <p>Pilih salah satu view di panel kiri untuk melihat data dalam format tabel.</p>
               </div>
             </div>
           </div>
@@ -92,23 +144,44 @@ import AppHeader from '@/components/Layout/AppHeader.vue';
 
 const inspectorStore = useInspectorStore();
 const searchQuery = ref('');
+const viewMode = ref('table'); // 'table' or 'json'
 
 const handleSearch = () => {
-  inspectorStore.filterKeys(searchQuery.value);
+  inspectorStore.filterViews(searchQuery.value);
 };
 
-const handleSelectKey = (key) => {
-  inspectorStore.selectKey(key);
+const handleSelectView = (view) => {
+  viewMode.value = 'table'; // Reset to table view on new selection
+  inspectorStore.selectView(view);
 };
 
 const handleRefresh = () => {
-  if (inspectorStore.selectedKey) {
-    inspectorStore.selectKey(inspectorStore.selectedKey);
+  if (inspectorStore.selectedView) {
+    inspectorStore.selectView(inspectorStore.selectedView);
   }
 };
 
+/**
+ * Format header name for display (snake_case to Title Case)
+ */
+const formatHeader = (header) => {
+  return header
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
+/**
+ * Format cell value for display
+ */
+const formatCellValue = (value) => {
+  if (value === null || value === undefined) return '-';
+  if (typeof value === 'object') return JSON.stringify(value);
+  return value;
+};
+
 onMounted(() => {
-  inspectorStore.fetchKeys();
+  inspectorStore.fetchViews();
 });
 </script>
 
@@ -165,6 +238,21 @@ onMounted(() => {
   background-color: #fff;
 }
 
+.sidebar-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  background-color: #21308f;
+}
+
+.sidebar-title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 .search-box {
   padding: 16px;
   border-bottom: 1px solid #e2e8f0;
@@ -197,17 +285,17 @@ onMounted(() => {
   border-color: #21308f;
 }
 
-.keys-list {
+.views-list {
   flex: 1;
   overflow-y: auto;
   padding: 8px;
 }
 
-.key-item {
+.view-item {
   width: 100%;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 12px;
   padding: 12px 16px;
   border: none;
   background: none;
@@ -219,31 +307,42 @@ onMounted(() => {
   color: #334155;
 }
 
-.key-item:hover {
+.view-item:hover {
   background-color: #f1f5f9;
 }
 
-.key-item.active {
-  background-color: #eff6ff; /* bg-blue-50 */
+.view-item.active {
+  background-color: #eff6ff;
   color: #21308f;
   font-weight: 500;
   border-left: 4px solid #21308f;
   border-radius: 4px 8px 8px 4px;
 }
 
-.key-text {
+.view-icon {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.view-item.active .view-icon {
+  color: #21308f;
+}
+
+.view-text {
   font-size: 0.875rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
 }
 
 .chevron-icon {
   opacity: 0;
   transition: opacity 0.2s;
+  flex-shrink: 0;
 }
 
-.key-item.active .chevron-icon {
+.view-item.active .chevron-icon {
   opacity: 1;
 }
 
@@ -265,6 +364,12 @@ onMounted(() => {
   justify-content: space-between;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
 .preview-title {
   font-size: 1rem;
   font-weight: 600;
@@ -276,6 +381,51 @@ onMounted(() => {
 .placeholder-title {
   font-family: 'Poppins', sans-serif;
   color: #64748b;
+}
+
+.row-count {
+  font-size: 0.75rem;
+  color: white;
+  background-color: #21308f;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.view-toggle {
+  display: flex;
+  background-color: #f1f5f9;
+  border-radius: 6px;
+  padding: 2px;
+}
+
+.toggle-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 4px;
+  color: #64748b;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toggle-btn:hover {
+  color: #21308f;
+}
+
+.toggle-btn.active {
+  background-color: white;
+  color: #21308f;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 .action-btn {
@@ -300,11 +450,60 @@ onMounted(() => {
   padding: 0;
 }
 
+/* Table Styles */
+.table-container {
+  height: 100%;
+  overflow: auto;
+  padding: 0;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.data-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.data-table th {
+  background-color: #21308f;
+  color: white;
+  font-weight: 600;
+  text-align: left;
+  padding: 14px 16px;
+  white-space: nowrap;
+  border-bottom: 2px solid #1a2570;
+}
+
+.data-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #334155;
+  background-color: white;
+}
+
+.data-table tbody tr:hover td {
+  background-color: #f8fafc;
+}
+
+.data-table tbody tr:nth-child(even) td {
+  background-color: #fafbfc;
+}
+
+.data-table tbody tr:nth-child(even):hover td {
+  background-color: #f1f5f9;
+}
+
+/* JSON Viewer */
 .json-viewer {
   height: 100%;
   overflow: auto;
   padding: 24px;
-  background-color: #1e293b; /* Slate-800 */
+  background-color: #1e293b;
 }
 
 .json-viewer pre {
@@ -315,6 +514,7 @@ onMounted(() => {
   line-height: 1.5;
 }
 
+/* Empty State */
 .empty-preview {
   height: 100%;
   display: flex;
@@ -331,6 +531,7 @@ onMounted(() => {
   color: #cbd5e1;
 }
 
+/* Loading States */
 .loading-overlay {
   position: absolute;
   top: 0;

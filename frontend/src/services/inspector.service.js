@@ -1,12 +1,21 @@
 import api from './api';
 
 class InspectorService {
-  getKeys() {
-    return api.get('/datacore/cache/keys');
+  /**
+   * Fetch list of available Materialized Views
+   * @returns {Promise} Response containing array of view names
+   */
+  getViewList() {
+    return api.get('/datacore/views');
   }
 
-  getData(key) {
-    return api.get(`/datacore/cache/${encodeURIComponent(key)}`);
+  /**
+   * Fetch data from a specific Materialized View
+   * @param {string} viewName - Name of the materialized view
+   * @returns {Promise} Response containing array of row objects
+   */
+  getViewData(viewName) {
+    return api.get(`/datacore/views/${encodeURIComponent(viewName)}`);
   }
 }
 
