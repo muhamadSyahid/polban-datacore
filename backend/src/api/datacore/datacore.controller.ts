@@ -2,6 +2,7 @@ import {
   ClassSerializerInterceptor,
   Controller,
   Get,
+  NotImplementedException,
   Param,
   Query,
   UseGuards,
@@ -42,11 +43,32 @@ export class DataCoreController {
 
   @Get('cache/keys')
   async getCacheKeys() {
-    return this.datacoreService.getCacheKeys();
+    throw new NotImplementedException();
   }
 
   @Get('cache/:key')
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async getCacheDetail(@Param('key') key: string) {
-    return this.datacoreService.getCacheDetail(key);
+    throw new NotImplementedException();
+  }
+
+  @Get('inspector/mv')
+  async getInspectorMvList() {
+    return this.datacoreService.getInspectorMvList();
+  }
+
+  @Get('inspector/mv/:mvName')
+  async getInspectorMvData(
+    @Param('mvName') mvName: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+    @Query('q') search?: string,
+  ) {
+    return this.datacoreService.getInspectorMvData(
+      mvName,
+      Number(page),
+      Number(limit),
+      search,
+    );
   }
 }

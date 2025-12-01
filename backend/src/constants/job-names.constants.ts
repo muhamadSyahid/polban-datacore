@@ -6,7 +6,7 @@ export const JOB_NAMES = {
   SYNC_AKADEMIK: 'sync-akademik',
 
   // Aggregation (Transform) Jobs
-  // Job untuk menghitung ulang aggr_cache dari Fact Tables
+  // Job untuk merefresh materialized views dari Fact Tables
 
   // Aggregation untuk API Guest (Data Publik)
   AGGREGATE_GUEST_DATA: 'aggregate-guest-data',

@@ -1,8 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { EtlRepository } from '../../etl/etl.repository';
-import { QUEUE_CONSTANTS } from '../../constants';
+import { ALLOWED_MV_NAMES, QUEUE_CONSTANTS } from '../../constants';
 import { DashboardStatsDto } from './dto/dashboard-stats.dto';
 import { JobHistoryListDto } from './dto/job-history.dto';
 
@@ -75,12 +75,39 @@ export class DataCoreService {
     return { data: await this.etlRepository.getJobLogById(id) };
   }
 
-  async getCacheKeys() {
-    return { data: await this.etlRepository.getAllCacheKeys() };
+  async getInspectorMvList() {
+    return { data: ALLOWED_MV_NAMES };
   }
 
-  async getCacheDetail(key: string) {
-    return { jsonData: await this.etlRepository.getCacheData(key) };
+  async getInspectorMvData(
+    mvName: string,
+    page: number = 1,
+    limit: number = 10,
+    search?: string,
+  ) {
+    if (!ALLOWED_MV_NAMES.includes(mvName)) {
+      throw new BadRequestException(
+        `Materialized View '${mvName}' is not accessible or does not exist.`,
+      );
+    }
+
+    const { data, total } =
+      await this.etlRepository.getMaterializedViewDataPaged(
+        mvName,
+        page,
+        limit,
+        search,
+      );
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        perPage: limit,
+        lastPage: Math.ceil(total / limit),
+      },
+    };
   }
 
   private calculateDuration(start: Date, end: Date | null): string {
