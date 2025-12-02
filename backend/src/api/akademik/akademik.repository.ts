@@ -2,7 +2,7 @@ import { Inject, Injectable, NotImplementedException } from '@nestjs/common';
 import { DRIZZLE_PROVIDER } from '../../database/drizzle/drizzle.provider';
 import * as schema from '../../database/drizzle/schema';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { MvMhsJalurDaftarResultDto } from 'src/common/dto/mv-result.dto';
+import { MvMhsJalurDaftarResultDto } from '../../common/dto/mv-result.dto';
 
 @Injectable()
 export class AkademikRepository {
