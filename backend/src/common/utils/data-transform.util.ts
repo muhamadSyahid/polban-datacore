@@ -9,7 +9,7 @@ export class DataTransformUtil {
     data.forEach((item) => {
       const key = String(item[keyField]);
       const current = map.get(key) || 0;
-      map.set(key, current + item.total);
+      map.set(key, current + Number(item.total));
     });
     return Array.from(map.entries()).map(([key, total]) => ({
       [keyField]: key,
@@ -38,7 +38,7 @@ export class DataTransformUtil {
         });
       }
       const entry = provMap.get(item.namaProvinsi);
-      entry.total += item.total;
+      entry.total += Number(item.total);
     });
 
     return { data: Array.from(provMap.values()) };
@@ -54,7 +54,7 @@ export class DataTransformUtil {
   ) {
     const kotaList = data.map((item) => ({
       kota: item.namaWilayah,
-      total: item.total,
+      total: Number(item.total),
       geo: { lat: item.wilayahLat, lng: item.wilayahLng },
     }));
 
