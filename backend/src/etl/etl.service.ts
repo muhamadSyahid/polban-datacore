@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EtlRepository } from './etl.repository';
 import { DataHubService } from './datahub/datahub.service';
+import { AuthService } from '../auth/auth.service';
 import { JOB_NAMES } from '../constants';
 
 @Injectable()
@@ -10,6 +11,7 @@ export class EtlService {
   constructor(
     private readonly etlRepository: EtlRepository,
     private readonly dataHubService: DataHubService,
+    private readonly authService: AuthService,
   ) {}
 
   // Orchestration / Full sync
@@ -54,31 +56,40 @@ export class EtlService {
   // Sync Logic (Internal Implementations)
 
   private async syncMahasiswaInternal() {
+    this.logger.debug('Getting System Token...');
+    const token = await this.authService.getSystemToken();
+
     this.logger.debug('Syncing Mahasiswa data from DataHub...');
     const lastSync = await this.etlRepository.getLastSuccessfulSync(
       JOB_NAMES.SYNC_MAHASISWA,
     );
-    const data = await this.dataHubService.getMahasiswaData(lastSync);
+    const data = await this.dataHubService.getMahasiswaData(token, lastSync);
     await this.etlRepository.saveFactMahasiswa(data);
     this.logger.debug(`Synced ${data.length} mahasiswa records.`);
   }
 
   private async syncDosenInternal() {
+    this.logger.debug('Getting System Token...');
+    const token = await this.authService.getSystemToken();
+
     this.logger.debug('Syncing Dosen data from DataHub...');
     const lastSync = await this.etlRepository.getLastSuccessfulSync(
       JOB_NAMES.SYNC_DOSEN,
     );
-    const data = await this.dataHubService.getDosenData(lastSync);
+    const data = await this.dataHubService.getDosenData(token, lastSync);
     await this.etlRepository.saveFactDosen(data);
     this.logger.debug(`Synced ${data.length} dosen records.`);
   }
 
   private async syncAkademikInternal() {
+    this.logger.debug('Getting System Token...');
+    const token = await this.authService.getSystemToken();
+
     this.logger.debug('Syncing Akademik data from DataHub...');
     const lastSync = await this.etlRepository.getLastSuccessfulSync(
       JOB_NAMES.SYNC_AKADEMIK,
     );
-    const data = await this.dataHubService.getAkademikData(lastSync);
+    const data = await this.dataHubService.getAkademikData(token, lastSync);
     await this.etlRepository.saveFactAkademik(data);
     this.logger.debug(`Synced ${data.length} akademik records.`);
   }
