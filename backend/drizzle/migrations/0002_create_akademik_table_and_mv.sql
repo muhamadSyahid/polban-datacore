@@ -45,11 +45,11 @@ CREATE MATERIALIZED VIEW "public"."mv_akademik_distribusi_nilai" AS (select "ang
 CREATE MATERIALIZED VIEW "public"."mv_akademik_tren_ip_rata_rata" AS (select "angkatan", "semester_urut", avg("ip_semester") as "ip_rata_rata" from "fact_akademik_ip" group by "fact_akademik_ip"."angkatan", "fact_akademik_ip"."semester_urut");--> statement-breakpoint
 CREATE MATERIALIZED VIEW "public"."mv_akademik_tren_ip_tertinggi" AS (select "angkatan", "semester_urut", max("ip_semester") as "ip_tertinggi" from "fact_akademik_ip" group by "fact_akademik_ip"."angkatan", "fact_akademik_ip"."semester_urut");--> statement-breakpoint
 
-CREATE UNIQUE INDEX "mv_akd_nilai_unique_idx" ON "mv_akademik_distribusi_nilai" ("angkatan", "kode_mk", "nilai_huruf");
-CREATE UNIQUE INDEX "mv_akd_ip_avg_unique_idx" ON "mv_akademik_tren_ip_rata_rata" ("angkatan", "semester_urut");
-CREATE UNIQUE INDEX "mv_akd_ip_max_unique_idx" ON "mv_akademik_tren_ip_tertinggi" ("angkatan", "semester_urut");
+CREATE UNIQUE INDEX "mv_akd_nilai_unique_idx" ON "mv_akademik_distribusi_nilai" ("angkatan", "kode_mk", "nilai_huruf");--> statement-breakpoint
+CREATE UNIQUE INDEX "mv_akd_ip_avg_unique_idx" ON "mv_akademik_tren_ip_rata_rata" ("angkatan", "semester_urut");--> statement-breakpoint
+CREATE UNIQUE INDEX "mv_akd_ip_max_unique_idx" ON "mv_akademik_tren_ip_tertinggi" ("angkatan", "semester_urut");--> statement-breakpoint
 
-CREATE INDEX "mv_akd_nilai_angkatan_idx" ON "mv_akademik_distribusi_nilai" ("angkatan");
-CREATE INDEX "mv_akd_ip_avg_angkatan_idx" ON "mv_akademik_tren_ip_rata_rata" ("angkatan");
-CREATE INDEX "mv_akd_ip_max_angkatan_idx" ON "mv_akademik_tren_ip_tertinggi" ("angkatan");
+CREATE INDEX "mv_akd_nilai_angkatan_idx" ON "mv_akademik_distribusi_nilai" ("angkatan");--> statement-breakpoint
+CREATE INDEX "mv_akd_ip_avg_angkatan_idx" ON "mv_akademik_tren_ip_rata_rata" ("angkatan");--> statement-breakpoint
+CREATE INDEX "mv_akd_ip_max_angkatan_idx" ON "mv_akademik_tren_ip_tertinggi" ("angkatan");--> statement-breakpoint
 CREATE INDEX "mv_akd_ip_max_sem_idx" ON "mv_akademik_tren_ip_tertinggi" ("semester_urut");
