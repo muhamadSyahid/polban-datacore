@@ -20,7 +20,7 @@ export class EtlService {
       JOB_NAMES.FULL_SYNC_AND_AGGREGATE,
       triggeredBy,
       async () => {
-        // 1. Sync All
+        // 1. Sync All (Ingestion)
         await this.syncMahasiswaInternal();
         await this.syncDosenInternal();
         await this.syncAkademikInternal();
@@ -56,7 +56,7 @@ export class EtlService {
   // Sync Logic (Internal Implementations)
 
   private async syncMahasiswaInternal() {
-    this.logger.debug('Getting System Token...');
+    this.logger.debug(`Getting System's DataHub Auth Token...`);
     const token = await this.authService.getSystemToken();
 
     this.logger.debug('Syncing Mahasiswa data from DataHub...');
@@ -69,7 +69,7 @@ export class EtlService {
   }
 
   private async syncDosenInternal() {
-    this.logger.debug('Getting System Token...');
+    this.logger.debug(`Getting System's DataHub Auth Token...`);
     const token = await this.authService.getSystemToken();
 
     this.logger.debug('Syncing Dosen data from DataHub...');
@@ -82,7 +82,7 @@ export class EtlService {
   }
 
   private async syncAkademikInternal() {
-    this.logger.debug('Getting System Token...');
+    this.logger.debug(`Getting System's DataHub Auth Token...`);
     const token = await this.authService.getSystemToken();
 
     this.logger.debug('Syncing Akademik data from DataHub...');
@@ -121,39 +121,43 @@ export class EtlService {
   private async aggregateGuestDataInternal() {
     this.logger.debug('Aggregating GUEST Data...');
 
-    // 1. GENDER
-    await this.etlRepository.refreshAggregatedGenderData();
+    await Promise.all([
+      // 1. GENDER
+      this.etlRepository.refreshAggregatedMhsGenderData(),
 
-    // 2. JENIS SLTA
-    await this.etlRepository.refreshAggregatedSltaData();
+      // 2. JENIS SLTA
+      this.etlRepository.refreshAggregatedMhsSltaData(),
 
-    // 3. RASIO DOSEN MAHASISWA
-    // TODO: RASIO DOSEN MAHASISWA AGGREGATION
+      // 3. RASIO DOSEN MAHASISWA
+      // TODO: RASIO DOSEN MAHASISWA AGGREGATION
 
-    // 4. DOMISILI
-    await this.etlRepository.refreshAggregatedDomisiliData();
+      // 4. DOMISILI
+      this.etlRepository.refreshAggregatedMhsDomisiliData(),
 
-    // 5. AGAMA
-    await this.etlRepository.refreshAggregatedAgamaData();
+      // 5. AGAMA
+      this.etlRepository.refreshAggregatedMhsAgamaData(),
 
-    // 6. JALUR DAFTAR / TIPE TES MASUK
-    await this.etlRepository.refreshAggregatedJalurDaftarData();
+      // 6. JALUR DAFTAR / TIPE TES MASUK
+      this.etlRepository.refreshAggregatedMhsJalurDaftarData(),
+    ]);
   }
 
   private async aggregateKemahasiswaanDataInternal() {
     this.logger.debug('Aggregating KEMAHASISWAAN Data...');
 
-    // 1. JUMLAH MAHASISWA
-    await this.etlRepository.refreshAggregatedJumlahMhsData();
+    await Promise.all([
+      // 1. JUMLAH MAHASISWA
+      this.etlRepository.refreshAggregatedMhsTotalData(),
 
-    // 2. GENDER
-    await this.etlRepository.refreshAggregatedGenderData();
+      // 2. GENDER
+      this.etlRepository.refreshAggregatedMhsGenderData(),
 
-    // 3. JENIS SLTA
-    await this.etlRepository.refreshAggregatedSltaData();
+      // 3. JENIS SLTA
+      this.etlRepository.refreshAggregatedMhsSltaData(),
 
-    // 4. AGAMA
-    await this.etlRepository.refreshAggregatedAgamaData();
+      // 4. AGAMA
+      this.etlRepository.refreshAggregatedMhsAgamaData(),
+    ]);
   }
 
   private async aggregateAkademikDataInternal() {

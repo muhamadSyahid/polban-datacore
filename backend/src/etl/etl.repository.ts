@@ -124,37 +124,39 @@ export class EtlRepository {
 
   // Aggregation (REFRESH MATERIALIZED VIEWS)
 
-  async refreshAggregatedGenderData(): Promise<void> {
+  // mahasiswa
+
+  async refreshAggregatedMhsGenderData(): Promise<void> {
     await this.db
       .refreshMaterializedView(schema.mvMahasiswaGender)
       .concurrently();
   }
 
-  async refreshAggregatedAgamaData(): Promise<void> {
+  async refreshAggregatedMhsAgamaData(): Promise<void> {
     await this.db
       .refreshMaterializedView(schema.mvMahasiswaAgama)
       .concurrently();
   }
 
-  async refreshAggregatedSltaData(): Promise<void> {
+  async refreshAggregatedMhsSltaData(): Promise<void> {
     await this.db
       .refreshMaterializedView(schema.mvMahasiswaSltaKategori)
       .concurrently();
   }
 
-  async refreshAggregatedJalurDaftarData(): Promise<void> {
+  async refreshAggregatedMhsJalurDaftarData(): Promise<void> {
     await this.db
       .refreshMaterializedView(schema.mvMahasiswaJalurDaftar)
       .concurrently();
   }
 
-  async refreshAggregatedJumlahMhsData(): Promise<void> {
+  async refreshAggregatedMhsTotalData(): Promise<void> {
     await this.db
       .refreshMaterializedView(schema.mvMahasiswaTotal)
       .concurrently();
   }
 
-  async refreshAggregatedDomisiliData(): Promise<void> {
+  async refreshAggregatedMhsDomisiliData(): Promise<void> {
     // Mengambil data lengkap agar bisa di-filter per provinsi nanti
     // Service bisa memilahnya menjadi dua jenis cache (All & Per Provinsi)
     await this.db

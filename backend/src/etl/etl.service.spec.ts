@@ -18,12 +18,19 @@ describe('EtlService', () => {
     saveFactMahasiswa: jest.fn(),
     saveFactDosen: jest.fn(),
     saveFactAkademik: jest.fn(),
-    refreshAggregatedGenderData: jest.fn(),
-    refreshAggregatedAgamaData: jest.fn(),
-    refreshAggregatedSltaData: jest.fn(),
-    refreshAggregatedDomisiliData: jest.fn(),
-    refreshAggregatedJumlahMhsData: jest.fn(),
-    refreshAggregatedJalurDaftarData: jest.fn(),
+
+    refreshAllAggregatedData: jest.fn(),
+
+    refreshAggregatedMhsGenderData: jest.fn(),
+    refreshAggregatedMhsAgamaData: jest.fn(),
+    refreshAggregatedMhsSltaData: jest.fn(),
+    refreshAggregatedMhsDomisiliData: jest.fn(),
+    refreshAggregatedMhsTotalData: jest.fn(),
+    refreshAggregatedMhsJalurDaftarData: jest.fn(),
+
+    refreshAggregatedAkdDistribusiNilai: jest.fn(),
+    refreshAggregatedAkdTrenIpRataRata: jest.fn(),
+    refreshAggregatedAkdTrenIpTertinggi: jest.fn(),
   };
 
   const mockDataHubService = {
@@ -207,19 +214,21 @@ describe('EtlService', () => {
         await service.aggregateGuestData('manual');
 
         // Assert Gender Refreshed
-        expect(repository.refreshAggregatedGenderData).toHaveBeenCalled();
+        expect(repository.refreshAggregatedMhsGenderData).toHaveBeenCalled();
 
         // Assert Agama Refreshed
-        expect(repository.refreshAggregatedAgamaData).toHaveBeenCalled();
+        expect(repository.refreshAggregatedMhsAgamaData).toHaveBeenCalled();
 
         // Assert SLTA Refreshed
-        expect(repository.refreshAggregatedSltaData).toHaveBeenCalled();
+        expect(repository.refreshAggregatedMhsSltaData).toHaveBeenCalled();
 
         // Assert Domisili Refreshed
-        expect(repository.refreshAggregatedDomisiliData).toHaveBeenCalled();
+        expect(repository.refreshAggregatedMhsDomisiliData).toHaveBeenCalled();
 
         // Assert Jalur / Tipe Tes Masuk Refreshed
-        expect(repository.refreshAggregatedJalurDaftarData).toHaveBeenCalled();
+        expect(
+          repository.refreshAggregatedMhsJalurDaftarData,
+        ).toHaveBeenCalled();
       });
     });
 
@@ -230,16 +239,16 @@ describe('EtlService', () => {
         await service.aggregateKemahasiswaanData('cron');
 
         // Assert Gender Refreshed
-        expect(repository.refreshAggregatedGenderData).toHaveBeenCalled();
+        expect(repository.refreshAggregatedMhsGenderData).toHaveBeenCalled();
 
         // Assert Agama Refreshed
-        expect(repository.refreshAggregatedAgamaData).toHaveBeenCalled();
+        expect(repository.refreshAggregatedMhsAgamaData).toHaveBeenCalled();
 
         // Assert SLTA Refreshed
-        expect(repository.refreshAggregatedSltaData).toHaveBeenCalled();
+        expect(repository.refreshAggregatedMhsSltaData).toHaveBeenCalled();
 
         // Assert Jumlah Mahasiswa Refreshed
-        expect(repository.refreshAggregatedJumlahMhsData).toHaveBeenCalled();
+        expect(repository.refreshAggregatedMhsTotalData).toHaveBeenCalled();
       });
     });
 
@@ -250,7 +259,9 @@ describe('EtlService', () => {
         await service.aggregateAkademikData('manual');
 
         // Assert Jalur / Tipe Tes Masuk Refreshed
-        expect(repository.refreshAggregatedJalurDaftarData).toHaveBeenCalled();
+        expect(
+          repository.refreshAggregatedMhsJalurDaftarData,
+        ).toHaveBeenCalled();
       });
     });
   });
