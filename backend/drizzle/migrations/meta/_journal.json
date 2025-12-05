@@ -8,6 +8,20 @@
       "when": 1764512553772,
       "tag": "0000_initialization",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1764949563980,
+      "tag": "0001_create_mahasiswa_table_and_mv",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1764949563981,
+      "tag": "0002_create_akademik_table_and_mv",
+      "breakpoints": true
     }
   ]
 }
