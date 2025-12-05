@@ -95,12 +95,7 @@ describe('EtlService', () => {
 
       // 4. Check Aggregation Calls
       // Should call ALL aggregate methods
-      expect(repository.refreshAggregatedGenderData).toHaveBeenCalled();
-      expect(repository.refreshAggregatedAgamaData).toHaveBeenCalled();
-      expect(repository.refreshAggregatedSltaData).toHaveBeenCalled();
-      expect(repository.refreshAggregatedDomisiliData).toHaveBeenCalled();
-      expect(repository.refreshAggregatedJumlahMhsData).toHaveBeenCalled();
-      expect(repository.refreshAggregatedJalurDaftarData).toHaveBeenCalled();
+      expect(repository.refreshAllAggregatedData).toHaveBeenCalled();
     });
 
     it('should log failure and rethrow error if any step fails', async () => {
@@ -257,6 +252,21 @@ describe('EtlService', () => {
         mockEtlRepository.startJobLog.mockResolvedValue('job-agg-akd');
 
         await service.aggregateAkademikData('manual');
+
+        // Assert Distribusi Nilai Refreshed
+        expect(
+          repository.refreshAggregatedAkdDistribusiNilai,
+        ).toHaveBeenCalled();
+
+        // Assert Tren IP Rata-Rata Refreshed
+        expect(
+          repository.refreshAggregatedAkdTrenIpRataRata,
+        ).toHaveBeenCalled();
+
+        // Assert Tren IP Tertinggi Refreshed
+        expect(
+          repository.refreshAggregatedAkdTrenIpTertinggi,
+        ).toHaveBeenCalled();
 
         // Assert Jalur / Tipe Tes Masuk Refreshed
         expect(

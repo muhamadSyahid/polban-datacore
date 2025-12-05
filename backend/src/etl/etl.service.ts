@@ -26,9 +26,7 @@ export class EtlService {
         await this.syncAkademikInternal();
 
         // 2. Aggregate All
-        await this.aggregateGuestDataInternal();
-        await this.aggregateKemahasiswaanDataInternal();
-        await this.aggregateAkademikDataInternal();
+        await this.etlRepository.refreshAllAggregatedData();
       },
     );
   }
@@ -163,17 +161,19 @@ export class EtlService {
   private async aggregateAkademikDataInternal() {
     this.logger.debug('Aggregating AKADEMIK Data...');
 
-    // 1. DISTRIBUSI NILAI
-    // TODO: DISTRIBUSI NILAI AGGREGATION
+    await Promise.all([
+      // 1. DISTRIBUSI NILAI
+      this.etlRepository.refreshAggregatedAkdDistribusiNilai(),
 
-    // 2. TREN IP RATA RATA
-    // TODO: TREN IP RATA RATA AGGREGATION
+      // 2. TREN IP RATA RATA
+      this.etlRepository.refreshAggregatedAkdTrenIpRataRata(),
 
-    // 3. TREN IP TERTINGGI
-    // TODO: TREN IP TERTINGGI AGGREGATION
+      // 3. TREN IP TERTINGGI
+      this.etlRepository.refreshAggregatedAkdTrenIpTertinggi(),
 
-    // 4. JALUR DAFTAR / TIPE TES MASUK
-    await this.etlRepository.refreshAggregatedJalurDaftarData();
+      // 4. JALUR DAFTAR / TIPE TES MASUK
+      this.etlRepository.refreshAggregatedMhsJalurDaftarData(),
+    ]);
   }
 
   // Helpers

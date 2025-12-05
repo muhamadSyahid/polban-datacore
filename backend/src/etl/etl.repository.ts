@@ -120,9 +120,116 @@ export class EtlRepository {
 
   async saveFactAkademik(data: DataHubAkademikDto[]) {
     if (data.length === 0) return;
+
+    const nilaiRecords: (typeof schema.factAkademikNilai.$inferInsert)[] = [];
+    const ipRecords: (typeof schema.factAkademikIp.$inferInsert)[] = [];
+
+    // Flattening, data per mahasiswa dipecah per nilai/ip
+    for (const mhs of data) {
+      // Prepare Fact Nilai
+      if (mhs.nilaiMahasiswa && mhs.nilaiMahasiswa.length > 0) {
+        for (const nilai of mhs.nilaiMahasiswa) {
+          nilaiRecords.push({
+            datahubNilaiId: nilai.nilaiId,
+            mahasiswaId: mhs.mahasiswaId,
+            angkatan: mhs.angkatan,
+
+            kodeMk: nilai.kodeMk,
+            namaMk: nilai.mataKuliah.namaMk,
+            sks: nilai.mataKuliah.sks,
+
+            nilaiHuruf: nilai.nilaiHuruf,
+
+            tahunAjaran: nilai.periode.tahunAjaran,
+            semesterNama: nilai.periode.semester,
+
+            // Asumsi fetch time karena akademik DataHub tidak ada field updated_at
+            datahubUpdatedAt: new Date(),
+            updatedAt: new Date(),
+          });
+        }
+      }
+
+      // Prepare Fact IP
+      if (mhs.ip && mhs.ip.length > 0) {
+        for (const ipItem of mhs.ip) {
+          // Logika Semester Urut: (Tahun - Angkatan) * 2 + (1 jika Ganjil, 2 jika Genap)
+          // Contoh: Angkatan 2023, Tahun 2023 Ganjil = (0)*2 + 1 = Sem 1
+          // Contoh: Angkatan 2023, Tahun 2024 Genap = (1)*2 + 2 = Sem 4
+          const semesterOffset = ipItem.periode.semester === 'Ganjil' ? 1 : 2;
+          const semesterUrut =
+            (ipItem.periode.tahunAjaran - mhs.angkatan) * 2 + semesterOffset;
+
+          ipRecords.push({
+            datahubIpId: ipItem.ipId,
+            mahasiswaId: mhs.mahasiswaId,
+            angkatan: mhs.angkatan,
+
+            tahunAjaran: ipItem.periode.tahunAjaran,
+            semesterNama: ipItem.periode.semester,
+            semesterUrut: semesterUrut > 0 ? semesterUrut : 0,
+
+            ipSemester: ipItem.ipSemester,
+            ipk: ipItem.ipk,
+
+            // Asumsi fetch time karena akademik DataHub tidak ada field updated_at
+            datahubUpdatedAt: new Date(),
+            updatedAt: new Date(),
+          });
+        }
+      }
+    }
+
+    // Bulk Upsert Fact Nilai
+    if (nilaiRecords.length > 0) {
+      await this.db
+        .insert(schema.factAkademikNilai)
+        .values(nilaiRecords)
+        .onConflictDoUpdate({
+          target: schema.factAkademikNilai.datahubNilaiId,
+          set: {
+            nilaiHuruf: sql`excluded.nilai_huruf`,
+            kodeMk: sql`excluded.kode_mk`,
+            namaMk: sql`excluded.nama_mk`,
+            sks: sql`excluded.sks`,
+            updatedAt: new Date(),
+          },
+        });
+    }
+
+    // Bulk Upsert Fact IP
+    if (ipRecords.length > 0) {
+      await this.db
+        .insert(schema.factAkademikIp)
+        .values(ipRecords)
+        .onConflictDoUpdate({
+          target: schema.factAkademikIp.datahubIpId,
+          set: {
+            ipSemester: sql`excluded.ip_semester`,
+            ipk: sql`excluded.ipk`,
+            semesterUrut: sql`excluded.semester_urut`,
+            updatedAt: new Date(),
+          },
+        });
+    }
   }
 
   // Aggregation (REFRESH MATERIALIZED VIEWS)
+
+  async refreshAllAggregatedData(): Promise<void> {
+    await Promise.all([
+      this.refreshAggregatedMhsGenderData(),
+      this.refreshAggregatedMhsAgamaData(),
+      this.refreshAggregatedMhsSltaData(),
+      this.refreshAggregatedMhsJalurDaftarData(),
+      this.refreshAggregatedMhsTotalData(),
+      this.refreshAggregatedMhsDomisiliData(),
+
+      this.refreshAggregatedAkdDistribusiNilai(),
+      this.refreshAggregatedAkdTrenIpRataRata(),
+      this.refreshAggregatedAkdTrenIpTertinggi(),
+    ]);
+  }
 
   // mahasiswa
 
@@ -161,6 +268,26 @@ export class EtlRepository {
     // Service bisa memilahnya menjadi dua jenis cache (All & Per Provinsi)
     await this.db
       .refreshMaterializedView(schema.mvMahasiswaDomisili)
+      .concurrently();
+  }
+
+  // akademik
+
+  async refreshAggregatedAkdDistribusiNilai(): Promise<void> {
+    await this.db
+      .refreshMaterializedView(schema.mvAkademikDistribusiNilai)
+      .concurrently();
+  }
+
+  async refreshAggregatedAkdTrenIpRataRata(): Promise<void> {
+    await this.db
+      .refreshMaterializedView(schema.mvAkademikTrenIpRataRata)
+      .concurrently();
+  }
+
+  async refreshAggregatedAkdTrenIpTertinggi(): Promise<void> {
+    await this.db
+      .refreshMaterializedView(schema.mvAkademikTrenIpTertinggi)
       .concurrently();
   }
 
