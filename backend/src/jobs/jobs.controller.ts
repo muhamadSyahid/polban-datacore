@@ -13,6 +13,11 @@ import { Roles } from '../common/decorators/roles.decorator';
 export class JobsController {
   constructor(private readonly jobsService: JobsService) {}
 
+  @Roles(
+    UserRole.DATACORE_ADMIN,
+    UserRole.DATAHUB_ADMIN,
+    UserRole.DATAHUB_PARTICIPANT,
+  )
   @Post('run')
   async runJob(@Body() createJobDto: CreateJobDto) {
     return this.jobsService.addJobToQueue(createJobDto);
