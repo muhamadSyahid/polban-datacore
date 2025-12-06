@@ -42,7 +42,7 @@ CREATE INDEX "fact_akd_ip_tren_idx" ON "fact_akademik_ip" USING btree ("angkatan
 -- MATERIALIZED VIEWS
 
 CREATE MATERIALIZED VIEW "public"."mv_akademik_distribusi_nilai" AS (select "angkatan", "kode_mk", "nama_mk", "sks", "nilai_huruf", count(*) as "total" from "fact_akademik_nilai" group by "fact_akademik_nilai"."angkatan", "fact_akademik_nilai"."kode_mk", "fact_akademik_nilai"."nama_mk", "fact_akademik_nilai"."sks", "fact_akademik_nilai"."nilai_huruf");--> statement-breakpoint
-CREATE MATERIALIZED VIEW "public"."mv_akademik_tren_ip_rata_rata" AS (select "angkatan", "semester_urut", avg("ip_semester") as "ip_rata_rata" from "fact_akademik_ip" group by "fact_akademik_ip"."angkatan", "fact_akademik_ip"."semester_urut");--> statement-breakpoint
+CREATE MATERIALIZED VIEW "public"."mv_akademik_tren_ip_rata_rata" AS (select "angkatan", "semester_urut", avg("ip_semester")::float as "ip_rata_rata" from "fact_akademik_ip" group by "fact_akademik_ip"."angkatan", "fact_akademik_ip"."semester_urut");--> statement-breakpoint
 CREATE MATERIALIZED VIEW "public"."mv_akademik_tren_ip_tertinggi" AS (select "angkatan", "semester_urut", max("ip_semester") as "ip_tertinggi" from "fact_akademik_ip" group by "fact_akademik_ip"."angkatan", "fact_akademik_ip"."semester_urut");--> statement-breakpoint
 
 CREATE UNIQUE INDEX "mv_akd_nilai_unique_idx" ON "mv_akademik_distribusi_nilai" ("angkatan", "kode_mk", "nilai_huruf");--> statement-breakpoint

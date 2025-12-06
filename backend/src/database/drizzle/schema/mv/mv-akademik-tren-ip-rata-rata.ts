@@ -1,4 +1,4 @@
-import { avg } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { pgMaterializedView } from 'drizzle-orm/pg-core';
 import { factAkademikIp } from '../fact-akademik-ip';
 
@@ -9,7 +9,9 @@ export const mvAkademikTrenIpRataRata = pgMaterializedView(
     .select({
       angkatan: factAkademikIp.angkatan,
       semesterUrut: factAkademikIp.semesterUrut,
-      ipRataRata: avg(factAkademikIp.ipSemester).as('ip_rata_rata'),
+      ipRataRata: sql<number>`avg(${factAkademikIp.ipSemester})::float`.as(
+        'ip_rata_rata',
+      ),
     })
     .from(factAkademikIp)
     .groupBy(factAkademikIp.angkatan, factAkademikIp.semesterUrut);
