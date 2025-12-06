@@ -1,99 +1,134 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Polban DataCore - Backend Documentation
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Dokumentasi ini ditujukan untuk pengembang yang akan melanjutkan pengembangan backend DataCore. Dokumen ini berisi penjelasan teknis mengenai struktur kode, pola desain, dan panduan pengembangan.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 📂 Struktur Direktori
 
-## Description
+Berikut adalah peta navigasi untuk memahami kode sumber (`src/`):
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- **`api/`**: Berisi controller dan service untuk endpoint publik yang diakses oleh frontend (DataView).
+- **`auth/`**: Modul otentikasi. Menangani validasi token dan komunikasi auth dengan DataHub.
+- **`common/`**: Kode yang digunakan bersama, seperti Decorators, Interceptors, dan Utilities.
+- **`config/`**: Konfigurasi aplikasi (env vars validation).
+- **`constants/`**: Konstanta global seperti nama job, endpoint URL, dll.
+- **`database/`**: Konfigurasi koneksi database dan skema Drizzle ORM.
+  - `schema/`: Definisi tabel dan relasi.
+- **`etl/`**: **Jantung aplikasi ini**. Menangani proses Extract, Transform, dan Load.
+  - `datahub/`: Service khusus untuk mengambil data dari API DataHub.
+- **`jobs/`**: Definisi Cron Jobs untuk penjadwalan otomatis.
 
-## Project setup
+---
 
-```bash
-$ npm install
-```
+## 🧠 Konsep Utama
 
-## Compile and run the project
+### 1. Pola ETL (Extract, Transform, Load)
 
-```bash
-# development
-$ npm run start
+Backend ini bukan sekadar CRUD biasa. Ia bertindak sebagai _Data Warehouse_ mini.
 
-# watch mode
-$ npm run start:dev
+- **Extract**: Dilakukan oleh `DataHubService` (`src/etl/datahub/`). Kita mengambil data mentah (JSON) dari API DataHub.
+- **Load**: Data mentah disimpan "apa adanya" (atau dengan sedikit penyesuaian tipe data) ke dalam tabel **Fact** (misal: `fact_mahasiswa`). Ini dilakukan oleh `EtlRepository`.
+- **Transform/Aggregate**: Kita tidak melakukan query berat (`GROUP BY`, `COUNT`, dll) secara _real-time_ saat user me-request API. Sebaliknya, kita melakukan kalkulasi berat ini di background dan menyimpannya ke **Materialized Views** (atau tabel agregasi).
 
-# production mode
-$ npm run start:prod
-```
+### 2. Materialized Views & Aggregation
 
-## Run tests
+Untuk performa query yang cepat, kita menggunakan konsep Materialized View.
+Saat job ETL berjalan (`EtlService`), setelah data baru masuk, kita me-refresh view ini.
 
-```bash
-# unit tests
-$ npm run test
+Contoh alur:
 
-# e2e tests
-$ npm run test:e2e
+1. Job `SYNC_MAHASISWA` berjalan -> Data baru masuk ke tabel `fact_mahasiswa`.
+2. Job `AGGREGATE_GENDER` berjalan -> Perintah SQL `REFRESH MATERIALIZED VIEW mv_mahasiswa_gender` dieksekusi.
+3. API Endpoint `/api/v1/mahasiswa/gender` hanya perlu melakukan `SELECT * FROM mv_mahasiswa_gender`.
 
-# test coverage
-$ npm run test:cov
-```
+### 3. Caching (Redis)
 
-## Deployment
+Meskipun Materialized View sudah cepat, kita tetap menggunakan Redis untuk caching di level HTTP Response.
+Interceptor akan mengecek apakah request yang sama sudah ada di Redis. Jika ada, return langsung tanpa menyentuh database.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+### 4. Otentikasi & Otorisasi (Auth Proxy)
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+DataCore **tidak menyimpan data user** (email, password) dan **tidak men-generate token JWT** sendiri. Seluruh proses manajemen user dan otentikasi dilakukan terpusat di **DataHub**.
 
-```bash
-$ npm install -g mau
-$ mau deploy
-```
+- **Login Proxy**: Saat user login via DataCore (misal dari Admin Web / DataView), DataCore meneruskan request ke API DataHub (`/api/login`). Token yang didapat dari DataHub dikembalikan ke user.
+- **Token Validation**: Saat ada request masuk ke endpoint terproteksi di DataCore, sistem akan memvalidasi token tersebut ke DataHub (`/api/user`) dan menyimpan hasilnya di Cache (Redis) selama 5 menit untuk mengurangi beban request ke DataHub.
+- **System Token**: Untuk komunikasi antar-server (misal saat ETL Job berjalan), DataCore menggunakan akun khusus (System User) untuk mendapatkan token dari DataHub.
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+---
 
-## Resources
+## 📊 API Endpoints
 
-Check out a few resources that may come in handy when working with NestJS:
+Untuk melihat daftar lengkap endpoint, struktur request, dan contoh response, silakan kunjungi dokumentasi kami:
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+🔗 [https://ikhsan3adi.is-a.dev/polban-datacore-api-docs/](https://ikhsan3adi.is-a.dev/polban-datacore-api-docs/)
 
-## Support
+---
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+## 🛠️ Panduan Pengembangan
 
-## Stay in touch
+### Bagaimana cara menambahkan data baru dari DataHub?
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+1.  **Cek API DataHub**: Pastikan endpoint tersedia di DataHub.
+2.  **Buat DTO**: Di `src/etl/datahub/dto/`, buat class DTO untuk memetakan respon JSON dari DataHub.
+3.  **Update `DataHubService`**: Tambahkan method `getNewData()` yang menggunakan `HttpService` untuk fetch data.
+4.  **Update Database Schema**:
+    - Edit `src/database/schema/fact.schema.ts` untuk membuat tabel penampung baru.
+    - Jalankan `bun run db:generate` dan `bun run db:migrate`.
+5.  **Update `EtlService`**: Tambahkan logika untuk memanggil `DataHubService` dan menyimpan ke DB.
 
-## License
+### Bagaimana cara membuat Agregasi/Statistik baru?
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+1.  **Desain Query SQL**: Coba dulu query agregasi (GROUP BY, dll) di tool database (DBeaver/pgAdmin).
+2.  **Buat Materialized View**:
+    - Definisikan view baru di skema Drizzle (`src/database/schema/aggregate.schema.ts`).
+    - Buat migrasi dengan menjalankan `bun run db:generate` dan `bun run db:migrate`.
+3.  **Buat Endpoint API**:
+    - Buat Controller dan Service baru di `src/api/`.
+    - Lakukan query `SELECT *` sederhana ke view yang baru dibuat.
+
+### Bagaimana cara debug proses Job ETL?
+
+Untuk mengetes tanpa menunggu jadwal:
+
+1. Terdapat beberapa endpoint debug yang dapat digunakan untuk menguji fungsi ETL secara langsung.
+   - `GET /api/etl/debug/fullSync` (memerlukan `Authorization` header dengan token `DATACORE_ADMIN`)
+   - `POST /api/jobs/run` (memerlukan `Authorization` header dengan token `DATACORE_ADMIN`, `DATAHUB_ADMIN` atau `DATAHUB_PARTICIPANT` serta request body berupa `{"jobName": "<nama_job> (default: 'full-sync-and-aggregate')"}`)
+2. Jalankan layanan [DataHub](https://github.com/ErsyaHasby/polban-datahub).
+3. Jalankan `bun run start:dev` untuk menjalankan server secara lokal.
+4. Hit endpoint tersebut via Postman/Curl.
+
+---
+
+## ⚠️ Troubleshooting Umum
+
+**Q: Data tidak muncul di API padahal Cron Job sukses?**
+
+A: Cek apakah Materialized View sudah di-refresh? Kadang data masuk ke tabel Fact, tapi view belum diperbarui. Pastikan `EtlService` memanggil fungsi refresh setelah insert data.
+
+**Q: Error koneksi database saat development?**
+
+A: Pastikan container Docker untuk Postgres dan Redis menyala. Cek file `.env` apakah kredensialnya sesuai.
+
+**Q: Perubahan skema database tidak terdeteksi?**
+
+A: Drizzle Kit perlu di-generate ulang. Jalankan `bun run db:generate` setiap kali mengubah file di `src/database/schema/`.
+
+**Q: Error saat sync data atau akses endpoint terproteksi (401 Unauthorized / Connection Refused)?**
+
+A:
+
+  1. Pastikan service **DataHub** sudah berjalan. DataCore butuh DataHub untuk validasi token dan ambil data.
+  2. Cek kredensial `DATACORE_SYSTEM_EMAIL` dan `DATACORE_SYSTEM_PASSWORD` di `.env`. Akun ini harus terdaftar di DataHub.
+
+**Q: Error "command not found" atau "module not found" saat install/run?**
+
+A: Pastikan Anda sudah masuk ke direktori backend (`cd backend`) sebelum menjalankan perintah `bun install` atau `bun run start`.
+
+**Q: Error "database does not exist" atau tabel tidak ditemukan?**
+
+A:
+
+  1. Pastikan database `polban_datacore` (atau nama sesuai `.env`) sudah dibuat di Postgres.
+  2. Jangan lupa jalankan migrasi: `bun run db:migrate`.
+
+**Q: Error aneh lainnya?**
+A: Coba hapus folder `node_modules` dan `bun.lockb`, lalu install ulang dependencies (`bun install`). Kadang cache package bisa bermasalah.
