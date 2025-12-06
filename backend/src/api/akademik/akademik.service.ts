@@ -5,6 +5,8 @@ import { AkademikDistribusiNilaiDto } from './dto/akademik-distribusi-nilai.dto'
 import {
   AkademikTrenIpRataRataDto,
   AkademikTrenIpTertinggiDto,
+  AngkatanIpDto,
+  SemesterIpDto,
 } from './dto/akademik-tren-ip.dto';
 
 @Injectable()
@@ -49,17 +51,58 @@ export class AkademikService {
     angkatan?: number,
     prodi?: string,
   ): Promise<AkademikDistribusiNilaiDto> {
-    throw new NotImplementedException();
+    let result =
+      await this.akademikRepository.getAggregatedDistribusiNilaiData();
 
-    return { angkatan, prodi, data: [] };
+    if (angkatan) {
+      result = result
+        .filter((item) => item.angkatan == angkatan);
+    }
+    if (prodi) {
+      // const slug = prodi.toLowerCase().replace(/\s+/g, '_');
+      // result = result
+      //   .filter((item) => {
+      //     const itemSlug = item.prodi?.toLowerCase().replace(/\s+/g, '_');
+      //     return itemSlug == slug;
+      //   })
+      //   .map((item) => ({ ...item, prodi: undefined }));
+    }
+
+    let data = result.reduce<Record<string, MataKuliahNilaiDto>>((acc,item) => {
+      const key = item.kodeMk;
+      if(!acc[key]) {
+        acc[key] = {
+          mataKuliah: item.namaMk,
+          indeksNilai: [],
+        };
+      }
+      acc[key].indeksNilai.push({
+        indeks: item.nilaiHuruf,
+        total: item.total
+      });
+      return acc;
+    },
+    {},
+  );
+
+    return { angkatan, prodi, data: Object.values(data)};
   }
 
   async getTrenIpRataRataData(
     angkatan?: number,
   ): Promise<AkademikTrenIpRataRataDto> {
-    throw new NotImplementedException();
+    let raw = await this.akademikRepository.getAggregatedTrenIpRataRataData();
+    let filtered = raw;
+    if (angkatan) {
+      filtered = raw.filter((item) => item.angkatan == angkatan);
+    }
+    let data: SemesterIpDto[] = filtered.map((item) => ({
+      semester: item.semesterUrut,
+      ip: item.ipRataRata,
+    }));
 
-    return { angkatan, data: [] };
+    return {
+      angkatan, data};
   }
 
   // Mengambil data tren IP tertinggi.
@@ -69,8 +112,25 @@ export class AkademikService {
     semester?: number,
     angkatan?: number,
   ): Promise<AkademikTrenIpTertinggiDto> {
-    throw new NotImplementedException();
+    let result = await this.akademikRepository.getAggregatedTrenIpTertinggiData();
+    let data;
+    if (angkatan) {
+      result = result.filter((item) => item.angkatan == angkatan);
+      let dataakademik: AkademikIpDto[] = result.map((item) => ({
+      angkatan: angkatan ? item.angkatan: undefined,
+      ip: item.ipRataRata,
+      }));
+      data = dataakademik;
+    }
 
-    return { angkatan, semester, data: [] };
+    // if (semester) {
+    //   result = result.filter((item) => item.semester == semester);
+    //   let datasemester: SemesterIpDto[] = result.map((item) => ({
+    //   angkatan: angkatan ? item.angkatan : undefined,
+    //   ip: item.ipRataRata,
+    //   }));
+    // }
+
+    return { angkatan, semester, data};
   }
 }
