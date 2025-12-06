@@ -1,8 +1,13 @@
-import { Inject, Injectable, NotImplementedException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { DRIZZLE_PROVIDER } from '../../database/drizzle/drizzle.provider';
 import * as schema from '../../database/drizzle/schema';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { MvMhsJalurDaftarResultDto } from '../../common/dto/mv-result.dto';
+import {
+  MvAkdDistribusiNilaiResultDto,
+  MvAkdTrenIpRataRataResultDto,
+  MvAkdTrenIpTertinggiResultDto,
+  MvMhsJalurDaftarResultDto,
+} from '../../common/dto/mv-result.dto';
 
 @Injectable()
 export class AkademikRepository {
@@ -15,20 +20,20 @@ export class AkademikRepository {
   }
 
   async getAggregatedDistribusiNilaiData(): Promise<
-    { angkatan: number; total: number }[]
+    MvAkdDistribusiNilaiResultDto[]
   > {
-    throw new NotImplementedException();
+    return await this.db.select().from(schema.mvAkademikDistribusiNilai);
   }
 
   async getAggregatedTrenIpRataRataData(): Promise<
-    { angkatan: number; total: number }[]
+    MvAkdTrenIpRataRataResultDto[]
   > {
-    throw new NotImplementedException();
+    return await this.db.select().from(schema.mvAkademikTrenIpRataRata);
   }
 
   async getAggregatedTrenIpTertinggiData(): Promise<
-    { angkatan: number; total: number }[]
+    MvAkdTrenIpTertinggiResultDto[]
   > {
-    throw new NotImplementedException();
+    return await this.db.select().from(schema.mvAkademikTrenIpTertinggi);
   }
 }

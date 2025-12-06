@@ -1,6 +1,11 @@
 import { Injectable, NotImplementedException } from '@nestjs/common';
 import { AkademikRepository } from './akademik.repository';
 import { AkademikTotalArrayDto } from './dto/akademik-total-array.dto';
+import { AkademikDistribusiNilaiDto } from './dto/akademik-distribusi-nilai.dto';
+import {
+  AkademikTrenIpRataRataDto,
+  AkademikTrenIpTertinggiDto,
+} from './dto/akademik-tren-ip.dto';
 
 @Injectable()
 export class AkademikService {
@@ -43,46 +48,27 @@ export class AkademikService {
   async getDistribusiNilaiData(
     angkatan?: number,
     prodi?: string,
-  ): Promise<AkademikTotalArrayDto> {
-    let result =
-      await this.akademikRepository.getAggregatedDistribusiNilaiData();
+  ): Promise<AkademikDistribusiNilaiDto> {
+    throw new NotImplementedException();
 
-    if (angkatan) {
-      result = result
-        .filter((item) => item.angkatan == angkatan)
-        .map((item) => ({ ...item, angkatan: undefined }));
-    }
-    if (prodi) {
-      // const slug = prodi.toLowerCase().replace(/\s+/g, '_');
-      // result = result
-      //   .filter((item) => {
-      //     const itemSlug = item.prodi?.toLowerCase().replace(/\s+/g, '_');
-      //     return itemSlug == slug;
-      //   })
-      //   .map((item) => ({ ...item, prodi: undefined }));
-    }
-
-    return { angkatan, prodi, data: result };
+    return { angkatan, prodi, data: [] };
   }
 
   async getTrenIpRataRataData(
     angkatan?: number,
-  ): Promise<AkademikTotalArrayDto> {
-    let result =
-      await this.akademikRepository.getAggregatedTrenIpRataRataData();
+  ): Promise<AkademikTrenIpRataRataDto> {
+    throw new NotImplementedException();
 
-    if (angkatan) {
-      result = result
-        .filter((item) => item.angkatan == angkatan)
-        .map((item) => ({ ...item, angkatan: undefined }));
-    }
-    return { angkatan, data: result };
+    return { angkatan, data: [] };
   }
 
+  // Mengambil data tren IP tertinggi.
+  // Jika parameter 'semester' diberikan, akan mengembalikan IP tertinggi per angkatan untuk semester tsb.
+  // Jika tidak (parameter 'angkatan' diberikan), akan mengembalikan IP tertinggi per semester untuk angkatan tsb.
   async getTrenIpTertinggiData(
     semester?: number,
     angkatan?: number,
-  ): Promise<AkademikTotalArrayDto> {
+  ): Promise<AkademikTrenIpTertinggiDto> {
     throw new NotImplementedException();
 
     return { angkatan, semester, data: [] };

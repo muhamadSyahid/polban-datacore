@@ -1,5 +1,7 @@
 import { IsInt, IsNotEmpty, IsString, IsNumber, IsIn } from 'class-validator';
 
+// Mahasiswa MV
+
 export class MvMhsGenderResultDto {
   @IsInt()
   @IsNotEmpty()
@@ -96,4 +98,60 @@ export class MvMhsTotalResultDto {
   @IsInt()
   @IsNotEmpty()
   total: number;
+}
+
+// Akademik MV
+
+export class MvAkdDistribusiNilaiResultDto {
+  @IsInt()
+  @IsNotEmpty()
+  angkatan: number;
+
+  @IsString()
+  @IsNotEmpty()
+  kodeMk: string;
+
+  @IsString()
+  @IsNotEmpty()
+  namaMk: string;
+
+  @IsInt()
+  @IsNotEmpty()
+  sks: number;
+
+  @IsString()
+  @IsNotEmpty()
+  nilaiHuruf: string;
+
+  @IsInt()
+  @IsNotEmpty()
+  total: number;
+}
+
+export class MvAkdTrenIpRataRataResultDto {
+  @IsInt()
+  @IsNotEmpty()
+  angkatan: number;
+
+  @IsInt()
+  @IsNotEmpty()
+  semesterUrut: number;
+
+  @IsNumber()
+  @IsNotEmpty()
+  ipRataRata: number;
+}
+
+export class MvAkdTrenIpTertinggiResultDto {
+  @IsInt()
+  @IsNotEmpty()
+  angkatan: number;
+
+  @IsInt()
+  @IsNotEmpty()
+  semesterUrut: number;
+
+  @IsNumber()
+  @IsNotEmpty()
+  ipTertinggi: number;
 }
