@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import LoginView from '@/views/LoginView.vue';
 import DashboardView from '@/views/DashboardView.vue';
 import JobRunnerView from '@/views/JobRunnerView.vue';
+import SettingsView from '@/views/SettingsView.vue';
 import DataInspectorView from '@/views/DataInspectorView.vue';
 import { useAuthStore } from '@/stores/auth';
 
@@ -19,9 +20,15 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
-    path: '/jobs',
+    path: '/etl-jobs',
     name: 'JobRunner',
     component: JobRunnerView,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/settings',
+    name: 'Settings',
+    component: SettingsView,
     meta: { requiresAuth: true }
   },
   {
