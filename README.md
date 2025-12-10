@@ -30,15 +30,55 @@ Aplikasi ini bertugas untuk memuat, mengekstrak dan mentransformasi/mengagregasi
 
 ## 📖 Tentang Proyek
 
-**Polban DataCore** adalah komponen agregator dan backend dari ekosistem [**Polban Dataverse**](https://github.com/ikhsan3adi/polban-dataverse). Aplikasi ini bertugas untuk mengagregasi data dari DataHub dan menyediakannya melalui REST API ([Lihat Dokumentasi API](#-api-endpoints)).
+**Polban DataCore** adalah komponen agregator dan backend utama dari ekosistem [**Polban Dataverse**](https://github.com/ikhsan3adi/polban-dataverse). Aplikasi ini berfungsi sebagai jembatan cerdas yang menghubungkan sumber data mentah dengan visualisasi data.
+
+Tugas utama DataCore meliputi:
+
+1.  **Extract**: Mengambil data mentah (Mahasiswa, Dosen, Akademik) dari DataHub.
+2.  **Load**: Menyimpan data tersebut ke dalam database internal untuk pemrosesan.
+3.  **Transform & Aggregate**: Mengolah data mentah menjadi data statistik yang bermakna (misal: sebaran gender, tren IPK, rasio dosen).
+4.  **Serve**: Menyediakan data matang tersebut melalui REST API yang cepat dan ter-cache.
 
 ### 🔗 Ekosistem Polban Dataverse
 
 Proyek ini merupakan bagian dari kolaborasi tiga tim pengembang:
 
-1. **[DataHub](https://github.com/ErsyaHasby/polban-datahub)** - Mengelola _database_, struktur tabel, halaman admin, dan data partisipan
-2. **[DataCore](https://github.com/muhamadSyahid/polban-datacore)** - Mengagregasi data dari DataHub dan menyediakannya melalui REST API
-3. **[DataView](https://github.com/ihsan-ramadhan/polban-dataview)** - Mengambil data dari API DataCore dan memvisualisasikannya kepada pengguna
+1.  **[DataHub](https://github.com/ErsyaHasby/polban-datahub)** - Mengelola _database_, struktur tabel, halaman admin, dan data partisipan (Sumber Data).
+2.  **[DataCore](https://github.com/muhamadSyahid/polban-datacore)** - Mengagregasi data dari DataHub dan menyediakannya melalui REST API (Backend & Processing).
+3.  **[DataView](https://github.com/ihsan-ramadhan/polban-dataview)** - Mengambil data dari API DataCore dan memvisualisasikannya kepada pengguna (Frontend Visualisasi).
+
+---
+
+## ⚙️ Arsitektur Sistem & Alur Data
+
+Sistem DataCore bekerja menggunakan prinsip **ETL (Extract, Transform, Load)** yang dijalankan secara terjadwal (Cron Job) atau manual.
+
+### 1. Extract (Pengambilan Data)
+
+Sistem melakukan request HTTP ke API DataHub menggunakan `DataHubService`.
+
+- **Incremental Sync**: Mengambil hanya data yang berubah sejak sinkronisasi terakhir untuk efisiensi.
+- **Auth**: Menggunakan System Token untuk otentikasi antar-layanan.
+
+### 2. Load (Penyimpanan)
+
+Data mentah disimpan ke dalam tabel "Fact" di database PostgreSQL menggunakan `EtlRepository`.
+
+- `FactMahasiswa`
+- `FactDosen`
+- `FactAkademik`
+
+### 3. Transform & Aggregate (Pengolahan)
+
+Data mentah diolah menjadi data statistik (Aggregated Data) dan disimpan dalam **Materialized Views**. Proses ini dilakukan oleh `EtlService`.
+
+- **Guest Data**: Gender, Jenis SLTA, Domisili, Agama, Jalur Pendaftaran.
+- **Kemahasiswaan**: Total Mahasiswa, Gender, Jenis SLTA, Agama.
+- **Akademik**: Distribusi Nilai, Tren IP Rata-rata, Tren IP Tertinggi, Jalur Pendaftaran.
+
+### 4. Serving (Penyajian)
+
+Data yang sudah teragregasi di Materialized View disajikan melalui REST API. Untuk meningkatkan performa, **Redis** digunakan untuk melakukan caching pada level response API (Response Caching).
 
 ---
 
@@ -46,11 +86,14 @@ Proyek ini merupakan bagian dari kolaborasi tiga tim pengembang:
 
 ### Backend
 
-- **Framework**: [NestJS](https://nestjs.com/)
-- **API Server**: [Bun Runtime](https://bun.sh/)
-- **ORM**: [Drizzle ORM](https://orm.drizzle.team/)
-- **Database**: [PostgreSQL](https://www.postgresql.org/)
-- **Caching**: [Redis](https://redis.io/)
+- **Runtime**: [Bun](https://bun.sh/) - JavaScript runtime yang cepat.
+- **Framework**: [NestJS](https://nestjs.com/) - Framework Node.js yang progresif.
+- **Language**: [TypeScript](https://www.typescriptlang.org/) - Superset JavaScript dengan tipe data statis.
+- **Database**: [PostgreSQL](https://www.postgresql.org/) - Database relasional open source.
+- **ORM**: [Drizzle ORM](https://orm.drizzle.team/) - ORM TypeScript yang ringan dan performant.
+- **Caching**: [Redis](https://redis.io/) - In-memory data store untuk caching respon API.
+- **HTTP Client**: Axios (via `@nestjs/axios`).
+- **Job Scheduling**: Cron (via `@nestjs/schedule`).
 
 ### Frontend (Admin DataCore)
 

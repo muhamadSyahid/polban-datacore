@@ -23,6 +23,7 @@ export class AuthGuard implements CanActivate {
     const user = await this.authService.validateToken(token);
 
     request['user'] = user;
+    request['datacore_token'] = token;
 
     return true;
   }

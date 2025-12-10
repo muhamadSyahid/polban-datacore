@@ -1,22 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { DRIZZLE_PROVIDER } from '../database/drizzle/drizzle.provider';
+import { count, desc, eq, ilike, or, SQL, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { JOB_NAMES, MV_NAMES } from '../constants';
+import { DRIZZLE_PROVIDER } from '../database/drizzle/drizzle.provider';
 import * as schema from '../database/drizzle/schema';
-import { count, desc, eq, isNotNull, sql } from 'drizzle-orm';
-import { CreateEtlJobLogDto } from './dto/create-etl-job-log.dto';
-import { DataHubMahasiswaDto } from './datahub/dto/datahub-mahasiswa.dto';
-import {
-  GenderAggregationResultDto,
-  AgamaAggregationResultDto,
-  SltaAggregationResultDto,
-  JalurDaftarAggregationResultDto,
-  JumlahMhsAggregationResultDto,
-  DomisiliAggregationResultDto,
-} from './dto/aggregation-result.dto';
-import { DataHubDosenDto } from './datahub/dto/datahub-dosen.dto';
 import { DataHubAkademikDto } from './datahub/dto/datahub-akademik.dto';
+import { DataHubDosenDto } from './datahub/dto/datahub-dosen.dto';
+import { DataHubMahasiswaDto } from './datahub/dto/datahub-mahasiswa.dto';
+import { CreateEtlJobLogDto } from './dto/create-etl-job-log.dto';
 import { EtlJobLogDto } from './dto/etl-job-log.dto';
-import { JOB_NAMES } from '../constants';
 
 @Injectable()
 export class EtlRepository {
@@ -128,129 +120,175 @@ export class EtlRepository {
 
   async saveFactAkademik(data: DataHubAkademikDto[]) {
     if (data.length === 0) return;
+
+    const nilaiRecords: (typeof schema.factAkademikNilai.$inferInsert)[] = [];
+    const ipRecords: (typeof schema.factAkademikIp.$inferInsert)[] = [];
+
+    // Flattening, data per mahasiswa dipecah per nilai/ip
+    for (const mhs of data) {
+      // Prepare Fact Nilai
+      if (mhs.nilaiMahasiswa && mhs.nilaiMahasiswa.length > 0) {
+        for (const nilai of mhs.nilaiMahasiswa) {
+          nilaiRecords.push({
+            datahubNilaiId: nilai.nilaiId,
+            mahasiswaId: mhs.mahasiswaId,
+            angkatan: mhs.angkatan,
+
+            kodeMk: nilai.kodeMk,
+            namaMk: nilai.mataKuliah.namaMk,
+            sks: nilai.mataKuliah.sks,
+
+            nilaiHuruf: nilai.nilaiHuruf,
+
+            tahunAjaran: nilai.periode.tahunAjaran,
+            semesterNama: nilai.periode.semester,
+
+            // Asumsi fetch time karena akademik DataHub tidak ada field updated_at
+            datahubUpdatedAt: new Date(),
+            updatedAt: new Date(),
+          });
+        }
+      }
+
+      // Prepare Fact IP
+      if (mhs.ip && mhs.ip.length > 0) {
+        for (const ipItem of mhs.ip) {
+          // Logika Semester Urut: (Tahun - Angkatan) * 2 + (1 jika Ganjil, 2 jika Genap)
+          // Contoh: Angkatan 2023, Tahun 2023 Ganjil = (0)*2 + 1 = Sem 1
+          // Contoh: Angkatan 2023, Tahun 2024 Genap = (1)*2 + 2 = Sem 4
+          const semesterOffset = ipItem.periode.semester === 'Ganjil' ? 1 : 2;
+          const semesterUrut =
+            (ipItem.periode.tahunAjaran - mhs.angkatan) * 2 + semesterOffset;
+
+          ipRecords.push({
+            datahubIpId: ipItem.ipId,
+            mahasiswaId: mhs.mahasiswaId,
+            angkatan: mhs.angkatan,
+
+            tahunAjaran: ipItem.periode.tahunAjaran,
+            semesterNama: ipItem.periode.semester,
+            semesterUrut: semesterUrut > 0 ? semesterUrut : 0,
+
+            ipSemester: ipItem.ipSemester,
+            ipk: ipItem.ipk,
+
+            // Asumsi fetch time karena akademik DataHub tidak ada field updated_at
+            datahubUpdatedAt: new Date(),
+            updatedAt: new Date(),
+          });
+        }
+      }
+    }
+
+    // Bulk Upsert Fact Nilai
+    if (nilaiRecords.length > 0) {
+      await this.db
+        .insert(schema.factAkademikNilai)
+        .values(nilaiRecords)
+        .onConflictDoUpdate({
+          target: schema.factAkademikNilai.datahubNilaiId,
+          set: {
+            nilaiHuruf: sql`excluded.nilai_huruf`,
+            kodeMk: sql`excluded.kode_mk`,
+            namaMk: sql`excluded.nama_mk`,
+            sks: sql`excluded.sks`,
+            updatedAt: new Date(),
+          },
+        });
+    }
+
+    // Bulk Upsert Fact IP
+    if (ipRecords.length > 0) {
+      await this.db
+        .insert(schema.factAkademikIp)
+        .values(ipRecords)
+        .onConflictDoUpdate({
+          target: schema.factAkademikIp.datahubIpId,
+          set: {
+            ipSemester: sql`excluded.ip_semester`,
+            ipk: sql`excluded.ipk`,
+            semesterUrut: sql`excluded.semester_urut`,
+            updatedAt: new Date(),
+          },
+        });
+    }
   }
 
-  // Aggregation
+  // Aggregation (REFRESH MATERIALIZED VIEWS)
 
-  async aggregateGenderData(): Promise<GenderAggregationResultDto[]> {
-    // GROUP BY angkatan, jenis_kelamin
-    return await this.db
-      .select({
-        angkatan: schema.factMahasiswa.angkatan,
-        jenis: schema.factMahasiswa.jenisKelamin,
-        total: sql<number>`count(*)::int`,
-      })
-      .from(schema.factMahasiswa)
-      .groupBy(schema.factMahasiswa.angkatan, schema.factMahasiswa.jenisKelamin)
-      .orderBy(desc(schema.factMahasiswa.angkatan));
+  async refreshAllAggregatedData(): Promise<void> {
+    await Promise.all([
+      this.refreshAggregatedMhsGenderData(),
+      this.refreshAggregatedMhsAgamaData(),
+      this.refreshAggregatedMhsSltaData(),
+      this.refreshAggregatedMhsJalurDaftarData(),
+      this.refreshAggregatedMhsTotalData(),
+      this.refreshAggregatedMhsDomisiliData(),
+
+      this.refreshAggregatedAkdDistribusiNilai(),
+      this.refreshAggregatedAkdTrenIpRataRata(),
+      this.refreshAggregatedAkdTrenIpTertinggi(),
+    ]);
   }
 
-  async aggregateAgamaData(): Promise<AgamaAggregationResultDto[]> {
-    // GROUP BY angkatan, agama
-    return await this.db
-      .select({
-        angkatan: schema.factMahasiswa.angkatan,
-        agama: schema.factMahasiswa.agama,
-        total: sql<number>`count(*)::int`,
-      })
-      .from(schema.factMahasiswa)
-      .groupBy(schema.factMahasiswa.angkatan, schema.factMahasiswa.agama)
-      .orderBy(desc(schema.factMahasiswa.angkatan));
+  // mahasiswa
+
+  async refreshAggregatedMhsGenderData(): Promise<void> {
+    await this.db
+      .refreshMaterializedView(schema.mvMahasiswaGender)
+      .concurrently();
   }
 
-  async aggregateSltaData(): Promise<SltaAggregationResultDto[]> {
-    const sltaTypeSql = sql<string>`
-        (CASE
-          WHEN UPPER(${schema.factMahasiswa.namaSlta}) SIMILAR TO '(SMK|SME|SMKN|SMKS)%' THEN 'SMK'
-          WHEN UPPER(${schema.factMahasiswa.namaSlta}) SIMILAR TO '(SMA|SPMA|SMAN|SMAS)%' THEN 'SMA'
-          WHEN UPPER(${schema.factMahasiswa.namaSlta}) SIMILAR TO '(MA|MAN|MAS)%' THEN 'MA'
-          ELSE 'Lainnya'
-        END)
-      `.as('jenis');
-
-    return await this.db
-      .select({
-        angkatan: schema.factMahasiswa.angkatan,
-        jenis: sltaTypeSql,
-        total: sql<number>`count(*)::int`,
-      })
-      .from(schema.factMahasiswa)
-      .where(isNotNull(schema.factMahasiswa.namaSlta))
-      .groupBy(schema.factMahasiswa.angkatan, sltaTypeSql);
+  async refreshAggregatedMhsAgamaData(): Promise<void> {
+    await this.db
+      .refreshMaterializedView(schema.mvMahasiswaAgama)
+      .concurrently();
   }
 
-  async aggregateJalurDaftarData(): Promise<JalurDaftarAggregationResultDto[]> {
-    // GROUP BY angkatan, nama_jalur_daftar
-    return await this.db
-      .select({
-        angkatan: schema.factMahasiswa.angkatan,
-        jalur: schema.factMahasiswa.namaJalurDaftar,
-        total: sql<number>`count(*)::int`,
-      })
-      .from(schema.factMahasiswa)
-      .where(sql`${schema.factMahasiswa.namaJalurDaftar} IS NOT NULL`)
-      .groupBy(
-        schema.factMahasiswa.angkatan,
-        schema.factMahasiswa.namaJalurDaftar,
-      );
+  async refreshAggregatedMhsSltaData(): Promise<void> {
+    await this.db
+      .refreshMaterializedView(schema.mvMahasiswaSltaKategori)
+      .concurrently();
   }
 
-  async aggregateJumlahMahasiswaPerAngkatan(): Promise<
-    JumlahMhsAggregationResultDto[]
-  > {
-    // GROUP BY angkatan
-    return await this.db
-      .select({
-        angkatan: schema.factMahasiswa.angkatan,
-        total: sql<number>`count(*)::int`,
-      })
-      .from(schema.factMahasiswa)
-      .groupBy(schema.factMahasiswa.angkatan)
-      .orderBy(desc(schema.factMahasiswa.angkatan));
+  async refreshAggregatedMhsJalurDaftarData(): Promise<void> {
+    await this.db
+      .refreshMaterializedView(schema.mvMahasiswaJalurDaftar)
+      .concurrently();
   }
 
-  async aggregateDomisiliData(): Promise<DomisiliAggregationResultDto[]> {
-    // GROUP BY provinsi, wilayah (termasuk geo lat/long)
+  async refreshAggregatedMhsTotalData(): Promise<void> {
+    await this.db
+      .refreshMaterializedView(schema.mvMahasiswaTotal)
+      .concurrently();
+  }
+
+  async refreshAggregatedMhsDomisiliData(): Promise<void> {
     // Mengambil data lengkap agar bisa di-filter per provinsi nanti
     // Service bisa memilahnya menjadi dua jenis cache (All & Per Provinsi)
-    return await this.db
-      .select({
-        namaProvinsi: schema.factMahasiswa.namaProvinsi,
-        provinsiLat: schema.factMahasiswa.provinsiLat,
-        provinsiLng: schema.factMahasiswa.provinsiLng,
-        namaWilayah: schema.factMahasiswa.namaWilayah,
-        wilayahLat: schema.factMahasiswa.wilayahLat,
-        wilayahLng: schema.factMahasiswa.wilayahLng,
-        total: sql<number>`count(*)::int`,
-      })
-      .from(schema.factMahasiswa)
-      .where(sql`${schema.factMahasiswa.namaProvinsi} IS NOT NULL`)
-      .groupBy(
-        schema.factMahasiswa.namaProvinsi,
-        schema.factMahasiswa.provinsiLat,
-        schema.factMahasiswa.provinsiLng,
-        schema.factMahasiswa.namaWilayah,
-        schema.factMahasiswa.wilayahLat,
-        schema.factMahasiswa.wilayahLng,
-      );
+    await this.db
+      .refreshMaterializedView(schema.mvMahasiswaDomisili)
+      .concurrently();
   }
 
-  // Cache Saving
-  async saveAggregateResult(key: string, data: any) {
-    return await this.db
-      .insert(schema.aggrCache)
-      .values({
-        cacheKey: key,
-        data: { data },
-        lastUpdated: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: schema.aggrCache.cacheKey,
-        set: {
-          data: { data },
-          lastUpdated: new Date(),
-        },
-      });
+  // akademik
+
+  async refreshAggregatedAkdDistribusiNilai(): Promise<void> {
+    await this.db
+      .refreshMaterializedView(schema.mvAkademikDistribusiNilai)
+      .concurrently();
+  }
+
+  async refreshAggregatedAkdTrenIpRataRata(): Promise<void> {
+    await this.db
+      .refreshMaterializedView(schema.mvAkademikTrenIpRataRata)
+      .concurrently();
+  }
+
+  async refreshAggregatedAkdTrenIpTertinggi(): Promise<void> {
+    await this.db
+      .refreshMaterializedView(schema.mvAkademikTrenIpTertinggi)
+      .concurrently();
   }
 
   // READ
@@ -309,19 +347,108 @@ export class EtlRepository {
     return 0;
   }
 
-  async getAllCacheKeys(): Promise<string[]> {
-    const result = await this.db
-      .select({ key: schema.aggrCache.cacheKey })
-      .from(schema.aggrCache);
-    return result.map((r) => r.key);
+  // INSPECTOR
+
+  async getMaterializedViewDataPaged(
+    mvName: string,
+    page: number,
+    limit: number,
+    search?: string,
+  ): Promise<{ data: any[]; total: number }> {
+    const config = this.mvConfig[mvName];
+    if (!config) {
+      throw new Error(`Materialized View '${mvName}' is not configured.`);
+    }
+
+    const { table, searchFields } = config;
+    const offset = (page - 1) * limit;
+
+    // Build Filter Condition (Dynamic Search)
+    let whereCondition: SQL | undefined = undefined;
+    if (search && searchFields.length > 0) {
+      const searchConditions = searchFields.map((field) =>
+        ilike(sql`${field}::text`, `%${search}%`),
+      );
+
+      whereCondition = or(...searchConditions);
+    }
+
+    const dataQuery = this.db.select().from(table).limit(limit).offset(offset);
+
+    if (whereCondition) {
+      dataQuery.where(whereCondition);
+    }
+
+    const countQuery = this.db.select({ count: count() }).from(table);
+
+    if (whereCondition) {
+      countQuery.where(whereCondition);
+    }
+
+    const [data, totalResult] = await Promise.all([dataQuery, countQuery]);
+
+    return {
+      data,
+      total: totalResult[0].count,
+    };
   }
 
-  async getCacheData(key: string): Promise<any> {
-    const result = await this.db
-      .select({ data: schema.aggrCache.data })
-      .from(schema.aggrCache)
-      .where(eq(schema.aggrCache.cacheKey, key))
-      .limit(1);
-    return result[0]?.data;
-  }
+  private mvConfig = {
+    [MV_NAMES.MAHASISWA_GENDER]: {
+      table: schema.mvMahasiswaGender,
+      searchFields: [schema.mvMahasiswaGender.jenis],
+    },
+    [MV_NAMES.MAHASISWA_AGAMA]: {
+      table: schema.mvMahasiswaAgama,
+      searchFields: [schema.mvMahasiswaAgama.agama],
+    },
+    [MV_NAMES.MAHASISWA_SLTA_KATEGORI]: {
+      table: schema.mvMahasiswaSltaKategori,
+      searchFields: [schema.mvMahasiswaSltaKategori.jenis],
+    },
+    [MV_NAMES.MAHASISWA_JALUR_DAFTAR]: {
+      table: schema.mvMahasiswaJalurDaftar,
+      searchFields: [schema.mvMahasiswaJalurDaftar.tipe],
+    },
+    [MV_NAMES.MAHASISWA_TOTAL]: {
+      table: schema.mvMahasiswaTotal,
+      searchFields: [],
+    },
+    [MV_NAMES.MAHASISWA_DOMISILI_KOTA]: {
+      table: schema.mvMahasiswaDomisili,
+      searchFields: [
+        schema.mvMahasiswaDomisili.namaProvinsi,
+        schema.mvMahasiswaDomisili.namaWilayah,
+        schema.mvMahasiswaDomisili.provinsiLat,
+        schema.mvMahasiswaDomisili.provinsiLng,
+        schema.mvMahasiswaDomisili.wilayahLat,
+        schema.mvMahasiswaDomisili.wilayahLng,
+      ],
+    },
+
+    [MV_NAMES.AKADEMIK_DISTRIBUSI_NILAI]: {
+      table: schema.mvAkademikDistribusiNilai,
+      searchFields: [
+        schema.mvAkademikDistribusiNilai.angkatan,
+        schema.mvAkademikDistribusiNilai.kodeMk,
+        schema.mvAkademikDistribusiNilai.namaMk,
+        schema.mvAkademikDistribusiNilai.sks,
+        schema.mvAkademikDistribusiNilai.nilaiHuruf,
+      ],
+    },
+    [MV_NAMES.AKADEMIK_TREN_IP_RATA_RATA]: {
+      table: schema.mvAkademikTrenIpRataRata,
+      searchFields: [
+        schema.mvAkademikTrenIpRataRata.angkatan,
+        schema.mvAkademikTrenIpRataRata.semesterUrut,
+      ],
+    },
+    [MV_NAMES.AKADEMIK_TREN_IP_TERTINGGI]: {
+      table: schema.mvAkademikTrenIpTertinggi,
+      searchFields: [
+        schema.mvAkademikTrenIpTertinggi.angkatan,
+        schema.mvAkademikTrenIpTertinggi.semesterUrut,
+      ],
+    },
+  };
 }

@@ -12,6 +12,7 @@ import { lastValueFrom } from 'rxjs';
 import { LoginDto } from './dto/login.dto';
 import { UserDto } from './dto/user.dto';
 import { LoginResponseDto } from './dto/login-response.dto';
+import { DATACORE_SYSTEM_AUTH_TOKEN_CACHE_KEY } from '../constants';
 
 @Injectable()
 export class AuthService {
@@ -79,6 +80,27 @@ export class AuthService {
     } catch (error) {
       this.logger.warn(`Token validation failed: ${error.message}`);
       throw new UnauthorizedException('Invalid or expired token');
+    }
+  }
+
+  async getSystemToken(): Promise<string> {
+    const cacheKey = DATACORE_SYSTEM_AUTH_TOKEN_CACHE_KEY;
+
+    const cachedToken = await this.cacheManager.get<string>(cacheKey);
+    if (cachedToken) return cachedToken;
+
+    const email = this.configService.get<string>('DATACORE_SYSTEM_EMAIL');
+    const password = this.configService.get<string>('DATACORE_SYSTEM_PASSWORD');
+
+    try {
+      const response = await this.login({ email, password });
+
+      await this.cacheManager.set(cacheKey, response.token, 60 * 60 * 1000);
+
+      return response.token;
+    } catch (error) {
+      this.logger.error('Failed to authenticate as System User', error);
+      throw new Error('System authentication failed');
     }
   }
 }

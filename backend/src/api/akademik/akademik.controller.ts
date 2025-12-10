@@ -7,7 +7,7 @@ import {
   UseGuards,
   Version,
 } from '@nestjs/common';
-import { CacheInterceptor } from '@nestjs/cache-manager';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { ApiTags } from '@nestjs/swagger';
 import { AkademikService } from './akademik.service';
 import { AkademikTotalArrayDto } from './dto/akademik-total-array.dto';
@@ -15,10 +15,16 @@ import { AuthGuard } from '../../common/guards/auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { UserRole } from '../../constants/roles.constants';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { AkademikDistribusiNilaiDto } from './dto/akademik-distribusi-nilai.dto';
+import {
+  AkademikTrenIpRataRataDto,
+  AkademikTrenIpTertinggiDto,
+} from './dto/akademik-tren-ip.dto';
 
 @ApiTags('Akademik')
 @Controller('akademik')
 @UseInterceptors(ClassSerializerInterceptor)
+@CacheTTL(300000)
 @UseInterceptors(CacheInterceptor)
 @UseGuards(AuthGuard, RolesGuard)
 @Roles(UserRole.DATACORE_ADMIN, UserRole.DATAVIEW_INTERNAL)
@@ -33,5 +39,31 @@ export class AkademikController {
     @Query('kelas') kelas?: string,
   ): Promise<AkademikTotalArrayDto> {
     return this.akademikService.getTipeTesMasukData(angkatan, prodi, kelas);
+  }
+
+  @Version('1')
+  @Get('distribusi-nilai')
+  async getDistribusiNilai(
+    @Query('angkatan') angkatan?: number,
+    @Query('prodi') prodi?: string,
+  ): Promise<AkademikDistribusiNilaiDto> {
+    return this.akademikService.getDistribusiNilaiData(angkatan, prodi);
+  }
+
+  @Version('1')
+  @Get('tren-ip-rata-rata')
+  async getTrenIpRataRata(
+    @Query('angkatan') angkatan?: number,
+  ): Promise<AkademikTrenIpRataRataDto> {
+    return this.akademikService.getTrenIpRataRataData(angkatan);
+  }
+
+  @Version('1')
+  @Get('tren-ip-tertinggi')
+  async getTrenIpTertinggi(
+    @Query('semester') semester?: number,
+    @Query('angkatan') angkatan?: number,
+  ): Promise<AkademikTrenIpTertinggiDto> {
+    return this.akademikService.getTrenIpTertinggiData(semester, angkatan);
   }
 }

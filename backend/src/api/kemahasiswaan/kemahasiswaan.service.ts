@@ -1,8 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { KemahasiswaanRepository } from './kemahasiswaan.repository';
-import { KEMAHASISWAAN_CACHE_KEYS } from '../../constants';
 import { KemahasiswaanTotalArrayDto } from './dto/kemahasiswaan-total-array.dto';
-import { KemahasiswaanTotalItemDto } from './dto/kemahasiswaan-total-array.dto';
 
 @Injectable()
 export class KemahasiswaanService {
@@ -10,36 +8,24 @@ export class KemahasiswaanService {
     private readonly kemahasiswaanRepository: KemahasiswaanRepository,
   ) {}
 
-  private async getAndUnwrapCache(cacheKey: string) {
-    const dataWrapper =
-      await this.kemahasiswaanRepository.getAggregatedData(cacheKey);
-
-    if (!dataWrapper || !dataWrapper.data) {
-      throw new NotFoundException(`Cache data not found for key: ${cacheKey}`);
-    }
-
-    return dataWrapper;
-  }
-
   async getJumlahMahasiswaData(
     angkatan?: number,
     prodi?: string,
   ): Promise<KemahasiswaanTotalArrayDto> {
-    const cacheKey = KEMAHASISWAAN_CACHE_KEYS.JUMLAH_MAHASISWA;
+    const result =
+      await this.kemahasiswaanRepository.getAggregatedJumlahMahasiswaData(
+        angkatan,
+      );
 
-    const cache = await this.getAndUnwrapCache(cacheKey);
-
-    let result = cache.data as KemahasiswaanTotalItemDto[];
-
-    if (angkatan) {
-      result = result.filter((item) => item.angkatan == angkatan);
-    }
+    // Filter Prodi/Kelas masih di Service (Logic Future Proofing)
     if (prodi) {
       // const slug = prodi.toLowerCase().replace(/\s+/g, '_');
-      // result = result.filter((item) => {
-      //   const itemSlug = item.prodi?.toLowerCase().replace(/\s+/g, '_');
-      //   return itemSlug == slug;
-      // });
+      // result = result
+      //   .filter((item) => {
+      //     const itemSlug = item.prodi?.toLowerCase().replace(/\s+/g, '_');
+      //     return itemSlug == slug;
+      //   })
+      //   .map((item) => ({ ...item, prodi: undefined }));
     }
 
     return { angkatan, prodi, data: result };
@@ -50,28 +36,27 @@ export class KemahasiswaanService {
     prodi?: string,
     kelas?: string,
   ): Promise<KemahasiswaanTotalArrayDto> {
-    const cacheKey = KEMAHASISWAAN_CACHE_KEYS.GENDER;
+    const result =
+      await this.kemahasiswaanRepository.getAggregatedGenderData(angkatan);
 
-    const cache = await this.getAndUnwrapCache(cacheKey);
-
-    let result = cache.data as KemahasiswaanTotalItemDto[];
-
-    if (angkatan) {
-      result = result.filter((item) => item.angkatan == angkatan);
-    }
+    // Filter Prodi/Kelas masih di Service
     if (prodi) {
       // const slug = prodi.toLowerCase().replace(/\s+/g, '_');
-      // result = result.filter((item) => {
-      //   const itemSlug = item.prodi?.toLowerCase().replace(/\s+/g, '_');
-      //   return itemSlug == slug;
-      // });
+      // result = result
+      //   .filter((item) => {
+      //     const itemSlug = item.prodi?.toLowerCase().replace(/\s+/g, '_');
+      //     return itemSlug == slug;
+      //   })
+      //   .map((item) => ({ ...item, prodi: undefined }));
     }
     if (kelas) {
       // const slug = kelas.toLowerCase().replace(/\s+/g, '_');
-      // result = result.filter((item) => {
-      //   const itemSlug = item.kelas?.toLowerCase().replace(/\s+/g, '_');
-      //   return itemSlug == slug;
-      // });
+      // result = result
+      //   .filter((item) => {
+      //     const itemSlug = item.kelas?.toLowerCase().replace(/\s+/g, '_');
+      //     return itemSlug == slug;
+      //   })
+      //   .map((item) => ({ ...item, kelas: undefined }));
     }
 
     return { angkatan, prodi, kelas, data: result };
@@ -82,28 +67,26 @@ export class KemahasiswaanService {
     prodi?: string,
     kelas?: string,
   ): Promise<KemahasiswaanTotalArrayDto> {
-    const cacheKey = KEMAHASISWAAN_CACHE_KEYS.JENIS_SLTA;
+    const result =
+      await this.kemahasiswaanRepository.getAggregatedSltaData(angkatan);
 
-    const cache = await this.getAndUnwrapCache(cacheKey);
-
-    let result = cache.data as KemahasiswaanTotalItemDto[];
-
-    if (angkatan) {
-      result = result.filter((item) => item.angkatan == angkatan);
-    }
     if (prodi) {
       // const slug = prodi.toLowerCase().replace(/\s+/g, '_');
-      // result = result.filter((item) => {
-      //   const itemSlug = item.prodi?.toLowerCase().replace(/\s+/g, '_');
-      //   return itemSlug == slug;
-      // });
+      // result = result
+      //   .filter((item) => {
+      //     const itemSlug = item.prodi?.toLowerCase().replace(/\s+/g, '_');
+      //     return itemSlug == slug;
+      //   })
+      //   .map((item) => ({ ...item, prodi: undefined }));
     }
     if (kelas) {
       // const slug = kelas.toLowerCase().replace(/\s+/g, '_');
-      // result = result.filter((item) => {
-      //   const itemSlug = item.kelas?.toLowerCase().replace(/\s+/g, '_');
-      //   return itemSlug == slug;
-      // });
+      // result = result
+      //   .filter((item) => {
+      //     const itemSlug = item.kelas?.toLowerCase().replace(/\s+/g, '_');
+      //     return itemSlug == slug;
+      //   })
+      //   .map((item) => ({ ...item, kelas: undefined }));
     }
 
     return { angkatan, prodi, kelas, data: result };
@@ -114,28 +97,26 @@ export class KemahasiswaanService {
     prodi?: string,
     kelas?: string,
   ): Promise<KemahasiswaanTotalArrayDto> {
-    const cacheKey = KEMAHASISWAAN_CACHE_KEYS.AGAMA;
+    const result =
+      await this.kemahasiswaanRepository.getAggregatedAgamaData(angkatan);
 
-    const cache = await this.getAndUnwrapCache(cacheKey);
-
-    let result = cache.data as KemahasiswaanTotalItemDto[];
-
-    if (angkatan) {
-      result = result.filter((item) => item.angkatan == angkatan);
-    }
     if (prodi) {
       // const slug = prodi.toLowerCase().replace(/\s+/g, '_');
-      // result = result.filter((item) => {
-      //   const itemSlug = item.prodi?.toLowerCase().replace(/\s+/g, '_');
-      //   return itemSlug == slug;
-      // });
+      // result = result
+      //   .filter((item) => {
+      //     const itemSlug = item.prodi?.toLowerCase().replace(/\s+/g, '_');
+      //     return itemSlug == slug;
+      //   })
+      //   .map((item) => ({ ...item, prodi: undefined }));
     }
     if (kelas) {
       // const slug = kelas.toLowerCase().replace(/\s+/g, '_');
-      // result = result.filter((item) => {
-      //   const itemSlug = item.kelas?.toLowerCase().replace(/\s+/g, '_');
-      //   return itemSlug == slug;
-      // });
+      // result = result
+      //   .filter((item) => {
+      //     const itemSlug = item.kelas?.toLowerCase().replace(/\s+/g, '_');
+      //     return itemSlug == slug;
+      //   })
+      //   .map((item) => ({ ...item, kelas: undefined }));
     }
 
     return { angkatan, prodi, kelas, data: result };

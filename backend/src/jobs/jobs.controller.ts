@@ -4,7 +4,7 @@ import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateScheduleDto } from './dto/schedule-job.dto';
 import { AuthGuard } from '../common/guards/auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
-import { UserRole } from '../constants/roles.constants';
+import { UserRole } from '../constants';
 import { Roles } from '../common/decorators/roles.decorator';
 
 @Controller('jobs')
@@ -13,6 +13,11 @@ import { Roles } from '../common/decorators/roles.decorator';
 export class JobsController {
   constructor(private readonly jobsService: JobsService) {}
 
+  @Roles(
+    UserRole.DATACORE_ADMIN,
+    UserRole.DATAHUB_ADMIN,
+    UserRole.DATAHUB_PARTICIPANT,
+  )
   @Post('run')
   async runJob(@Body() createJobDto: CreateJobDto) {
     return this.jobsService.addJobToQueue(createJobDto);
