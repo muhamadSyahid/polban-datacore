@@ -3,7 +3,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { CacheModule } from '@nestjs/cache-manager';
-import KeyvRedis from '@keyv/redis';
+import { createKeyv } from '@keyv/redis';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ApiModule } from './api/api.module';
@@ -40,7 +40,7 @@ import { AuthModule } from './auth/auth.module';
         const redisPort = configService.get<string>('REDIS_PORT');
 
         return {
-          stores: [new KeyvRedis(`redis://${redisHost}:${redisPort}`)],
+          stores: [createKeyv(`redis://${redisHost}:${redisPort}`)],
         };
       },
       inject: [ConfigService],
