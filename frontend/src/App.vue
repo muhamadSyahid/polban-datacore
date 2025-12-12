@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { RouterView } from "vue-router";
-// TODO: Nanti kita bisa tambahkan komponen Global Toast/Notification (Toaster) dari shadcn di sini
+import { Toaster } from "@/components/ui/sonner";
 </script>
 
 <template>
     <RouterView />
+    <Toaster />
 </template>
