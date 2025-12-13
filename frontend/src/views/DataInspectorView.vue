@@ -1,583 +1,316 @@
-<template>
-  <div class="layout-wrapper">
-    <AppSidebar />
-    
-    <div class="main-content">
-      <AppHeader />
-      
-      <div class="content-body">
-        <div class="inspector-container">
-          <!-- Left Panel: Views List -->
-          <div class="inspector-sidebar">
-            <div class="sidebar-header">
-              <h3 class="sidebar-title">Materialized Views</h3>
-            </div>
-            <div class="search-box">
-              <div class="search-input-wrapper">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="search-icon"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                <input 
-                  type="text" 
-                  v-model="searchQuery" 
-                  @input="handleSearch" 
-                  placeholder="Cari View..." 
-                  class="search-input"
-                />
-              </div>
-            </div>
-            
-            <div class="views-list">
-              <div v-if="inspectorStore.loading && !inspectorStore.views.length" class="loading-state">
-                <div class="spinner-sm"></div>
-                <span>Memuat views...</span>
-              </div>
-              
-              <div v-else-if="inspectorStore.filteredViews.length === 0" class="empty-state">
-                <span>Tidak ada view ditemukan</span>
-              </div>
-              
-              <button 
-                v-for="view in inspectorStore.filteredViews" 
-                :key="view"
-                @click="handleSelectView(view)"
-                class="view-item"
-                :class="{ 'active': inspectorStore.selectedView === view }"
-              >
-                <div class="view-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
-                </div>
-                <span class="view-text">{{ view }}</span>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="chevron-icon"><polyline points="9 18 15 12 9 6"></polyline></svg>
-              </button>
-            </div>
-          </div>
+<script setup lang="ts">
+import { ref, onMounted, watch, computed } from "vue";
+import { toast } from "vue-sonner";
+import { inspectorService } from "@/api/inspector.service";
 
-          <!-- Right Panel: Data Preview -->
-          <div class="inspector-preview">
-            <div class="preview-header">
-              <div class="header-left">
-                <h3 class="preview-title">
-                  <span v-if="inspectorStore.selectedView">{{ inspectorStore.selectedView }}</span>
-                  <span v-else class="placeholder-title">Data Inspector</span>
-                </h3>
-                <span v-if="inspectorStore.hasData" class="row-count">
-                  {{ inspectorStore.rowCount }} baris
-                </span>
-              </div>
-              <div v-if="inspectorStore.selectedView" class="header-actions">
-                <!-- View Mode Toggle -->
-                <div class="view-toggle">
-                  <button 
-                    @click="viewMode = 'table'" 
-                    class="toggle-btn"
-                    :class="{ 'active': viewMode === 'table' }"
-                    title="Tampilan Tabel"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line></svg>
-                  </button>
-                  <button 
-                    @click="viewMode = 'json'" 
-                    class="toggle-btn"
-                    :class="{ 'active': viewMode === 'json' }"
-                    title="Tampilan JSON"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-                  </button>
-                </div>
-                <button @click="handleRefresh" class="action-btn" title="Refresh Data">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
-                </button>
-              </div>
-            </div>
+// Components
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+    Search,
+    Database,
+    RefreshCw,
+    ChevronLeft,
+    ChevronRight,
+    Table as TableIcon,
+} from "lucide-vue-next";
 
-            <div class="preview-body">
-              <div v-if="inspectorStore.loading && inspectorStore.selectedView" class="loading-overlay">
-                <div class="spinner"></div>
-                <p>Mengambil data...</p>
-              </div>
+// STATE
+const mvList = ref<string[]>([]);
+const selectedTable = ref<string>("");
+const tableData = ref<any[]>([]);
+const pagination = ref({ page: 1, lastPage: 1, total: 0, perPage: 10 });
+const searchQuery = ref("");
 
-              <!-- Table View (Default) -->
-              <div v-else-if="inspectorStore.hasData && viewMode === 'table'" class="table-container">
-                <table class="data-table">
-                  <thead>
-                    <tr>
-                      <th v-for="header in inspectorStore.headers" :key="header">
-                        {{ formatHeader(header) }}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="(row, index) in inspectorStore.tableData" :key="index">
-                      <td v-for="header in inspectorStore.headers" :key="header">
-                        {{ formatCellValue(row[header]) }}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+// LOADING STATES
+const isLoadingList = ref(false);
+const isLoadingData = ref(false);
 
-              <!-- JSON View -->
-              <div v-else-if="inspectorStore.hasData && viewMode === 'json'" class="json-viewer">
-                <pre><code>{{ JSON.stringify(inspectorStore.tableData, null, 2) }}</code></pre>
-              </div>
+// COMPUTED: Dynamic Columns based on first row of data
+const tableHeaders = computed(() => {
+    if (tableData.value.length === 0) return [];
+    return Object.keys(tableData.value[0]);
+});
 
-              <!-- Empty State -->
-              <div v-else class="empty-preview">
-                <div class="empty-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
-                </div>
-                <h3>Pilih Materialized View</h3>
-                <p>Pilih salah satu view di panel kiri untuk melihat data dalam format tabel.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
+// ACTIONS
+const fetchMvList = async () => {
+    isLoadingList.value = true;
+    try {
+        const list = await inspectorService.getMvList();
+        mvList.value = list;
+        // Auto select first table if available
+        if (list.length > 0 && !selectedTable.value) {
+            selectedTable.value = list[0]!;
+        }
+    } catch (err) {
+        toast.error("Gagal memuat daftar tabel");
+    } finally {
+        isLoadingList.value = false;
+    }
+};
 
-<script setup>
-import { ref, onMounted } from 'vue';
-import { useInspectorStore } from '@/stores/inspector';
-import AppSidebar from '@/components/Layout/AppSidebar.vue';
-import AppHeader from '@/components/Layout/AppHeader.vue';
+const fetchData = async () => {
+    if (!selectedTable.value) return;
 
-const inspectorStore = useInspectorStore();
-const searchQuery = ref('');
-const viewMode = ref('table'); // 'table' or 'json'
+    isLoadingData.value = true;
+    try {
+        const res = await inspectorService.getMvData(
+            selectedTable.value,
+            pagination.value.page,
+            pagination.value.perPage,
+            searchQuery.value,
+        );
+        tableData.value = res.data;
+        pagination.value = {
+            page: res.meta.page,
+            lastPage: res.meta.lastPage,
+            total: res.meta.total,
+            perPage: res.meta.perPage,
+        };
+    } catch (err) {
+        toast.error("Gagal memuat data tabel");
+        tableData.value = [];
+    } finally {
+        isLoadingData.value = false;
+    }
+};
 
+// HANDLERS
 const handleSearch = () => {
-  inspectorStore.filterViews(searchQuery.value);
+    pagination.value.page = 1;
+    fetchData();
 };
 
-const handleSelectView = (view) => {
-  viewMode.value = 'table'; // Reset to table view on new selection
-  inspectorStore.selectView(view);
+// Manual Debounce untuk Search (delay 500ms)
+let searchTimeout: number;
+const onSearchInput = () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        handleSearch();
+    }, 1000);
 };
 
-const handleRefresh = () => {
-  if (inspectorStore.selectedView) {
-    inspectorStore.selectView(inspectorStore.selectedView);
-  }
+const changePage = (newPage: number) => {
+    if (newPage < 1 || newPage > pagination.value.lastPage) return;
+    pagination.value.page = newPage;
+    fetchData();
 };
 
-/**
- * Format header name for display (snake_case to Title Case)
- */
-const formatHeader = (header) => {
-  return header
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-};
-
-/**
- * Format cell value for display
- */
-const formatCellValue = (value) => {
-  if (value === null || value === undefined) return '-';
-  if (typeof value === 'object') return JSON.stringify(value);
-  return value;
-};
+// WATCHERS
+watch(selectedTable, () => {
+    searchQuery.value = "";
+    pagination.value.page = 1;
+    fetchData();
+});
 
 onMounted(() => {
-  inspectorStore.fetchViews();
+    fetchMvList();
 });
 </script>
 
-<style scoped>
-/* Layout Variables */
-:root {
-  --color-primary: #21308f;
-  --color-bg-light: #f8fafc;
-  --color-border: #e2e8f0;
-  --color-text-main: #334155;
-  --color-text-muted: #64748b;
-}
+<template>
+    <div class="space-y-6 h-[calc(100vh-8rem)] flex flex-col">
+        <div
+            class="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        >
+            <div>
+                <h1 class="text-3xl font-bold tracking-tight text-foreground">
+                    Data Inspector
+                </h1>
+                <p class="text-muted-foreground">
+                    Inspeksi langsung isi tabel Materialized View (Read-Only).
+                </p>
+            </div>
+            <div class="flex items-center gap-2">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    @click="fetchData"
+                    :disabled="isLoadingData || !selectedTable"
+                >
+                    <RefreshCw
+                        class="w-4 h-4 mr-2"
+                        :class="{ 'animate-spin': isLoadingData }"
+                    />
+                    Refresh Data
+                </Button>
+            </div>
+        </div>
 
-.layout-wrapper {
-  display: flex;
-  min-height: 100vh;
-  background-color: #f8fafc;
-  font-family: 'Poppins', sans-serif;
-}
+        <div
+            class="flex flex-col sm:flex-row gap-4 p-4 bg-card border rounded-lg shadow-sm"
+        >
+            <div class="w-full sm:w-[300px]">
+                <Select v-model="selectedTable" :disabled="isLoadingList">
+                    <SelectTrigger>
+                        <SelectValue placeholder="Pilih Tabel..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem v-for="mv in mvList" :key="mv" :value="mv">
+                            <div class="flex items-center">
+                                <TableIcon
+                                    class="w-4 h-4 mr-2 text-muted-foreground"
+                                />
+                                {{ mv }}
+                            </div>
+                        </SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
 
-.main-content {
-  flex: 1;
-  margin-left: 280px;
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  overflow: hidden;
-}
+            <div class="relative w-full sm:w-[400px]">
+                <Search
+                    class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground"
+                />
+                <Input
+                    type="search"
+                    placeholder="Cari data di tabel ini..."
+                    class="pl-9"
+                    v-model="searchQuery"
+                    @input="onSearchInput"
+                    :disabled="!selectedTable"
+                />
+            </div>
+        </div>
 
-.content-body {
-  flex: 1;
-  padding: 24px;
-  overflow: hidden;
-  display: flex;
-}
+        <div
+            class="flex-1 border rounded-lg bg-card shadow-sm overflow-hidden flex flex-col relative"
+        >
+            <div v-if="isLoadingData" class="p-4 space-y-4">
+                <div class="flex items-center space-x-4">
+                    <Skeleton class="h-12 w-full" />
+                </div>
+                <div class="space-y-2">
+                    <Skeleton class="h-8 w-full" v-for="i in 5" :key="i" />
+                </div>
+            </div>
 
-.inspector-container {
-  display: flex;
-  width: 100%;
-  height: 100%;
-  background: white;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-  overflow: hidden;
-}
+            <div v-else class="flex-1 overflow-auto">
+                <Table>
+                    <TableHeader
+                        class="sticky top-0 bg-secondary/50 dark:bg-secondary/30 backdrop-blur z-10"
+                    >
+                        <TableRow>
+                            <TableHead
+                                class="w-[50px] font-semibold text-primary dark:text-primary-foreground"
+                                >#</TableHead
+                            >
+                            <TableHead
+                                v-for="header in tableHeaders"
+                                :key="header"
+                                class="capitalize whitespace-nowrap font-semibold text-primary dark:text-primary-foreground"
+                            >
+                                {{ header.replace(/([a-z])([A-Z])/g, "$1 $2") }}
+                            </TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        <TableRow v-if="tableData.length === 0">
+                            <TableCell
+                                :colspan="tableHeaders.length + 1"
+                                class="h-32 text-center text-muted-foreground"
+                            >
+                                <div
+                                    class="flex flex-col items-center justify-center gap-2"
+                                >
+                                    <Database
+                                        class="w-8 h-8 text-muted-foreground/50"
+                                    />
+                                    <p>Tidak ada data ditemukan.</p>
+                                </div>
+                            </TableCell>
+                        </TableRow>
 
-/* Sidebar List (Left Panel) */
-.inspector-sidebar {
-  width: 30%;
-  border-right: 1px solid #e2e8f0;
-  display: flex;
-  flex-direction: column;
-  background-color: #fff;
-}
+                        <TableRow
+                            v-for="(row, idx) in tableData"
+                            :key="idx"
+                            class="hover:bg-muted/50"
+                        >
+                            <TableCell
+                                class="font-mono text-xs text-muted-foreground"
+                            >
+                                {{
+                                    (pagination.page - 1) * pagination.perPage +
+                                    idx +
+                                    1
+                                }}
+                            </TableCell>
+                            <TableCell
+                                v-for="header in tableHeaders"
+                                :key="header + idx"
+                                class="whitespace-nowrap"
+                            >
+                                <span
+                                    v-if="row[header] === null"
+                                    class="text-muted-foreground italic"
+                                    >null</span
+                                >
+                                <span
+                                    v-else-if="typeof row[header] === 'boolean'"
+                                    :class="
+                                        row[header]
+                                            ? 'text-green-600'
+                                            : 'text-red-600'
+                                    "
+                                >
+                                    {{ String(row[header]) }}
+                                </span>
+                                <span v-else>
+                                    {{ row[header] }}
+                                </span>
+                            </TableCell>
+                        </TableRow>
+                    </TableBody>
+                </Table>
+            </div>
 
-.sidebar-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid #e2e8f0;
-  background-color: #21308f;
-}
-
-.sidebar-title {
-  margin: 0;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: white;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.search-box {
-  padding: 16px;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.search-input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.search-icon {
-  position: absolute;
-  left: 12px;
-  color: #94a3b8;
-}
-
-.search-input {
-  width: 100%;
-  padding: 10px 12px 10px 40px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-family: inherit;
-  font-size: 0.875rem;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.search-input:focus {
-  border-color: #21308f;
-}
-
-.views-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 8px;
-}
-
-.view-item {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  border: none;
-  background: none;
-  text-align: left;
-  cursor: pointer;
-  border-radius: 8px;
-  margin-bottom: 4px;
-  transition: all 0.2s;
-  color: #334155;
-}
-
-.view-item:hover {
-  background-color: #f1f5f9;
-}
-
-.view-item.active {
-  background-color: #eff6ff;
-  color: #21308f;
-  font-weight: 500;
-  border-left: 4px solid #21308f;
-  border-radius: 4px 8px 8px 4px;
-}
-
-.view-icon {
-  color: #94a3b8;
-  flex-shrink: 0;
-}
-
-.view-item.active .view-icon {
-  color: #21308f;
-}
-
-.view-text {
-  font-size: 0.875rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 1;
-}
-
-.chevron-icon {
-  opacity: 0;
-  transition: opacity 0.2s;
-  flex-shrink: 0;
-}
-
-.view-item.active .chevron-icon {
-  opacity: 1;
-}
-
-/* Preview Panel (Right Panel) */
-.inspector-preview {
-  width: 70%;
-  display: flex;
-  flex-direction: column;
-  background-color: #f8fafc;
-}
-
-.preview-header {
-  height: 60px;
-  padding: 0 24px;
-  background-color: white;
-  border-bottom: 1px solid #e2e8f0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.preview-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #21308f;
-  margin: 0;
-  font-family: 'Monaco', 'Consolas', monospace;
-}
-
-.placeholder-title {
-  font-family: 'Poppins', sans-serif;
-  color: #64748b;
-}
-
-.row-count {
-  font-size: 0.75rem;
-  color: white;
-  background-color: #21308f;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-weight: 500;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.view-toggle {
-  display: flex;
-  background-color: #f1f5f9;
-  border-radius: 6px;
-  padding: 2px;
-}
-
-.toggle-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 6px 10px;
-  border-radius: 4px;
-  color: #64748b;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.toggle-btn:hover {
-  color: #21308f;
-}
-
-.toggle-btn.active {
-  background-color: white;
-  color: #21308f;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-}
-
-.action-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 6px;
-  color: #64748b;
-  transition: all 0.2s;
-}
-
-.action-btn:hover {
-  background-color: #f1f5f9;
-  color: #21308f;
-}
-
-.preview-body {
-  flex: 1;
-  overflow: hidden;
-  position: relative;
-  padding: 0;
-}
-
-/* Table Styles */
-.table-container {
-  height: 100%;
-  overflow: auto;
-  padding: 0;
-}
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.875rem;
-}
-
-.data-table thead {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-}
-
-.data-table th {
-  background-color: #21308f;
-  color: white;
-  font-weight: 600;
-  text-align: left;
-  padding: 14px 16px;
-  white-space: nowrap;
-  border-bottom: 2px solid #1a2570;
-}
-
-.data-table td {
-  padding: 12px 16px;
-  border-bottom: 1px solid #e2e8f0;
-  color: #334155;
-  background-color: white;
-}
-
-.data-table tbody tr:hover td {
-  background-color: #f8fafc;
-}
-
-.data-table tbody tr:nth-child(even) td {
-  background-color: #fafbfc;
-}
-
-.data-table tbody tr:nth-child(even):hover td {
-  background-color: #f1f5f9;
-}
-
-/* JSON Viewer */
-.json-viewer {
-  height: 100%;
-  overflow: auto;
-  padding: 24px;
-  background-color: #1e293b;
-}
-
-.json-viewer pre {
-  margin: 0;
-  font-family: 'Monaco', 'Consolas', monospace;
-  font-size: 0.875rem;
-  color: #e2e8f0;
-  line-height: 1.5;
-}
-
-/* Empty State */
-.empty-preview {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: #94a3b8;
-  text-align: center;
-  padding: 32px;
-}
-
-.empty-icon {
-  margin-bottom: 16px;
-  color: #cbd5e1;
-}
-
-/* Loading States */
-.loading-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(255, 255, 255, 0.8);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
-}
-
-.spinner {
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #21308f;
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  animation: spin 1s linear infinite;
-  margin-bottom: 12px;
-}
-
-.spinner-sm {
-  border: 2px solid #f3f3f3;
-  border-top: 2px solid #21308f;
-  border-radius: 50%;
-  width: 16px;
-  height: 16px;
-  animation: spin 1s linear infinite;
-  margin-right: 8px;
-}
-
-.loading-state, .empty-state {
-  padding: 24px;
-  text-align: center;
-  color: #64748b;
-  font-size: 0.875rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-</style>
+            <div
+                class="p-4 border-t flex items-center justify-between bg-card shrink-0"
+            >
+                <div class="text-sm text-muted-foreground">
+                    Total <strong>{{ pagination.total }}</strong> baris
+                </div>
+                <div class="flex items-center gap-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        :disabled="pagination.page <= 1 || isLoadingData"
+                        @click="changePage(pagination.page - 1)"
+                    >
+                        <ChevronLeft class="h-4 w-4" />
+                    </Button>
+                    <div class="text-sm font-medium w-20 text-center">
+                        Hal {{ pagination.page }} / {{ pagination.lastPage }}
+                    </div>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        :disabled="
+                            pagination.page >= pagination.lastPage ||
+                            isLoadingData
+                        "
+                        @click="changePage(pagination.page + 1)"
+                    >
+                        <ChevronRight class="h-4 w-4" />
+                    </Button>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>

@@ -343,8 +343,18 @@ export class EtlRepository {
     return 0;
   }
 
-  async getTotalFactAkademik(): Promise<number> {
-    return 0;
+  async getTotalFactAkademikNilai(): Promise<number> {
+    const result = await this.db
+      .select({ count: count() })
+      .from(schema.factAkademikNilai);
+    return result[0].count;
+  }
+
+  async getTotalFactAkademikIp(): Promise<number> {
+    const result = await this.db
+      .select({ count: count() })
+      .from(schema.factAkademikIp);
+    return result[0].count;
   }
 
   // INSPECTOR
@@ -360,7 +370,7 @@ export class EtlRepository {
       throw new Error(`Materialized View '${mvName}' is not configured.`);
     }
 
-    const { table, searchFields } = config;
+    const { table, searchFields, sortBy } = config;
     const offset = (page - 1) * limit;
 
     // Build Filter Condition (Dynamic Search)
@@ -378,6 +388,8 @@ export class EtlRepository {
     if (whereCondition) {
       dataQuery.where(whereCondition);
     }
+
+    dataQuery.orderBy(...sortBy);
 
     const countQuery = this.db.select({ count: count() }).from(table);
 
@@ -397,22 +409,39 @@ export class EtlRepository {
     [MV_NAMES.MAHASISWA_GENDER]: {
       table: schema.mvMahasiswaGender,
       searchFields: [schema.mvMahasiswaGender.jenis],
+      sortBy: [
+        schema.mvMahasiswaGender.angkatan,
+        schema.mvMahasiswaGender.jenis,
+      ],
     },
     [MV_NAMES.MAHASISWA_AGAMA]: {
       table: schema.mvMahasiswaAgama,
       searchFields: [schema.mvMahasiswaAgama.agama],
+      sortBy: [
+        schema.mvMahasiswaAgama.angkatan,
+        desc(schema.mvMahasiswaAgama.total),
+      ],
     },
     [MV_NAMES.MAHASISWA_SLTA_KATEGORI]: {
       table: schema.mvMahasiswaSltaKategori,
       searchFields: [schema.mvMahasiswaSltaKategori.jenis],
+      sortBy: [
+        schema.mvMahasiswaSltaKategori.angkatan,
+        schema.mvMahasiswaSltaKategori.jenis,
+      ],
     },
     [MV_NAMES.MAHASISWA_JALUR_DAFTAR]: {
       table: schema.mvMahasiswaJalurDaftar,
       searchFields: [schema.mvMahasiswaJalurDaftar.tipe],
+      sortBy: [
+        schema.mvMahasiswaJalurDaftar.angkatan,
+        schema.mvMahasiswaJalurDaftar.tipe,
+      ],
     },
     [MV_NAMES.MAHASISWA_TOTAL]: {
       table: schema.mvMahasiswaTotal,
       searchFields: [],
+      sortBy: [schema.mvMahasiswaTotal.angkatan],
     },
     [MV_NAMES.MAHASISWA_DOMISILI_KOTA]: {
       table: schema.mvMahasiswaDomisili,
@@ -423,6 +452,10 @@ export class EtlRepository {
         schema.mvMahasiswaDomisili.provinsiLng,
         schema.mvMahasiswaDomisili.wilayahLat,
         schema.mvMahasiswaDomisili.wilayahLng,
+      ],
+      sortBy: [
+        schema.mvMahasiswaDomisili.namaProvinsi,
+        schema.mvMahasiswaDomisili.namaWilayah,
       ],
     },
 
@@ -435,6 +468,11 @@ export class EtlRepository {
         schema.mvAkademikDistribusiNilai.sks,
         schema.mvAkademikDistribusiNilai.nilaiHuruf,
       ],
+      sortBy: [
+        schema.mvAkademikDistribusiNilai.angkatan,
+        schema.mvAkademikDistribusiNilai.kodeMk,
+        schema.mvAkademikDistribusiNilai.nilaiHuruf,
+      ],
     },
     [MV_NAMES.AKADEMIK_TREN_IP_RATA_RATA]: {
       table: schema.mvAkademikTrenIpRataRata,
@@ -442,10 +480,18 @@ export class EtlRepository {
         schema.mvAkademikTrenIpRataRata.angkatan,
         schema.mvAkademikTrenIpRataRata.semesterUrut,
       ],
+      sortBy: [
+        schema.mvAkademikTrenIpRataRata.angkatan,
+        schema.mvAkademikTrenIpRataRata.semesterUrut,
+      ],
     },
     [MV_NAMES.AKADEMIK_TREN_IP_TERTINGGI]: {
       table: schema.mvAkademikTrenIpTertinggi,
       searchFields: [
+        schema.mvAkademikTrenIpTertinggi.angkatan,
+        schema.mvAkademikTrenIpTertinggi.semesterUrut,
+      ],
+      sortBy: [
         schema.mvAkademikTrenIpTertinggi.angkatan,
         schema.mvAkademikTrenIpTertinggi.semesterUrut,
       ],

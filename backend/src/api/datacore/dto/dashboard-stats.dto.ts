@@ -12,6 +12,7 @@ export class DashboardStatsDto {
   data: {
     totalMahasiswa: number;
     totalDosen: number;
-    totalDataAkademik: number;
+    totalDataAkademikNilai: number;
+    totalDataAkademikIp: number;
   };
 }

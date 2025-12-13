@@ -1,395 +1,328 @@
-<template>
-  <div class="layout-wrapper">
-    <AppSidebar />
-    
-    <div class="main-content">
-      <AppHeader />
-      
-      <div class="content-body">
-        <!-- Welcome Banner -->
-        <div class="welcome-banner">
-          <h1 class="welcome-title">Selamat Datang di DataCore Panel</h1>
-          <p class="welcome-subtitle">Monitor integrasi data Polban Dataverse secara real-time.</p>
-        </div>
+<script setup lang="ts">
+import { ref, onMounted } from "vue";
+import { dashboardService, type DashboardStats } from "@/api/dashboard.service";
+import { useAuthStore } from "@/stores/auth.store";
 
-        <!-- Loading State -->
-        <div v-if="dashboardStore.loading && !dashboardStore.stats" class="state-container">
-          <div class="spinner"></div>
-          <p>Memuat data statistik...</p>
-        </div>
+// Components
+import {
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+    CardDescription,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+    Users,
+    GraduationCap,
+    BookOpen,
+    ScrollText,
+    Activity,
+    Clock,
+    RotateCw,
+    CheckCircle2,
+    XCircle,
+    AlertCircle,
+} from "lucide-vue-next";
 
-        <!-- Error State -->
-        <div v-else-if="dashboardStore.error" class="state-container error">
-          <div class="error-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-          </div>
-          <p>{{ dashboardStore.error }}</p>
-          <button @click="dashboardStore.fetchStats()" class="retry-btn">Coba Lagi</button>
-        </div>
+const auth = useAuthStore();
+const isLoading = ref(false);
+const stats = ref<DashboardStats | null>(null);
+const lastUpdated = ref<Date>(new Date());
 
-        <!-- Stats Grid -->
-        <div v-else class="stats-grid">
-          <!-- Card 1: Total Mahasiswa -->
-          <div class="stat-card">
-            <div class="card-content">
-              <div class="text-content">
-                <p class="card-label">Total Mahasiswa</p>
-                <h3 class="card-value">{{ dashboardStore.studentCount ?? '-' }}</h3>
-                <p class="card-subtext">Data Terintegrasi</p>
-              </div>
-              <div class="icon-box">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-              </div>
-            </div>
-          </div>
-
-          <!-- Card 2: Total Dosen -->
-          <div class="stat-card">
-            <div class="card-content">
-              <div class="text-content">
-                <p class="card-label">Total Dosen</p>
-                <h3 class="card-value">{{ dashboardStore.lecturerCount ?? '-' }}</h3>
-                <p class="card-subtext">Data Terintegrasi</p>
-              </div>
-              <div class="icon-box">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
-              </div>
-            </div>
-          </div>
-
-          <!-- Card 3: Antrian Job -->
-          <div class="stat-card">
-            <div class="card-content">
-              <div class="text-content">
-                <p class="card-label">Antrian Job</p>
-                <div class="value-group">
-                  <h3 class="card-value">{{ dashboardStore.activeQueue }}</h3>
-                  <span v-if="dashboardStore.failedQueue > 0" class="badge-failed-mini">
-                    {{ dashboardStore.failedQueue }} Failed
-                  </span>
-                </div>
-                <p class="card-subtext">Active & Waiting</p>
-              </div>
-              <div class="icon-box secondary">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-              </div>
-            </div>
-          </div>
-
-          <!-- Card 4: Status Sinkronisasi -->
-          <div class="stat-card">
-            <div class="card-content">
-              <div class="text-content">
-                <p class="card-label">Status Sinkronisasi</p>
-                <div class="status-badge-wrapper">
-                  <span class="status-badge" :class="getStatusClass(dashboardStore.syncStatus)">
-                    {{ dashboardStore.syncStatus || 'UNKNOWN' }}
-                  </span>
-                </div>
-                <p class="card-subtext">
-                  {{ formatRelativeTime(dashboardStore.lastSyncTime) }}
-                </p>
-              </div>
-              <div class="icon-box">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
-<script setup>
-import { onMounted, onUnmounted } from 'vue';
-import { useDashboardStore } from '@/stores/dashboard';
-import AppSidebar from '@/components/Layout/AppSidebar.vue';
-import AppHeader from '@/components/Layout/AppHeader.vue';
-
-const dashboardStore = useDashboardStore();
-let pollingInterval = null;
-
-const getStatusClass = (status) => {
-  if (!status) return 'status-unknown';
-  const s = status.toLowerCase();
-  if (s === 'success') return 'status-success';
-  if (s === 'failed') return 'status-failed';
-  if (s === 'pending' || s === 'running') return 'status-pending';
-  return 'status-unknown';
+// Format Angka (misal: 1200 -> 1.200)
+const formatNumber = (num: number) => {
+    return new Intl.NumberFormat("id-ID").format(num);
 };
 
-const formatRelativeTime = (isoString) => {
-  if (!isoString) return '-';
-  const date = new Date(isoString);
-  const now = new Date();
-  const diffInSeconds = Math.floor((now - date) / 1000);
-  
-  const rtf = new Intl.RelativeTimeFormat('id', { numeric: 'auto' });
+// Format Tanggal
+const formatDate = (dateString: string | null) => {
+    if (!dateString) return "-";
+    return new Date(dateString).toLocaleString("id-ID", {
+        dateStyle: "medium",
+        timeStyle: "medium",
+    });
+};
 
-  if (diffInSeconds < 60) return rtf.format(-diffInSeconds, 'second');
-  if (diffInSeconds < 3600) return rtf.format(-Math.floor(diffInSeconds / 60), 'minute');
-  if (diffInSeconds < 86400) return rtf.format(-Math.floor(diffInSeconds / 3600), 'hour');
-  return rtf.format(-Math.floor(diffInSeconds / 86400), 'day');
+// Fetch Data Function
+const fetchStats = async () => {
+    isLoading.value = true;
+    try {
+        const data = await dashboardService.getStats();
+        stats.value = data;
+        lastUpdated.value = new Date();
+    } catch (error) {
+        console.error("Failed to fetch dashboard stats:", error);
+    } finally {
+        isLoading.value = false;
+    }
 };
 
 onMounted(() => {
-  dashboardStore.fetchStats();
-  pollingInterval = setInterval(() => {
-    dashboardStore.fetchStats();
-  }, 10000);
-});
-
-onUnmounted(() => {
-  if (pollingInterval) {
-    clearInterval(pollingInterval);
-  }
+    fetchStats();
 });
 </script>
 
-<style scoped>
-:root {
-  --color-primary: #21308f;
-  --color-primary-light: #3a4dc6;
-  --color-secondary: #f6983e;
-  --color-secondary-dark: #de8836;
-  --color-neutral-bg: #f8fafc;
-  --color-text-primary: #21308f;
-  --color-text-secondary: #64748b;
-  --radius-card: 0.75rem; /* 12px */
-  --radius-icon: 1rem; /* 16px */
-}
+<template>
+    <div class="space-y-6 animate-in fade-in duration-500">
+        <div
+            class="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+        >
+            <div>
+                <h1 class="text-3xl font-bold tracking-tight text-foreground">
+                    Dashboard
+                </h1>
+                <p class="text-muted-foreground">
+                    Ringkasan kesehatan sistem DataCore & statistik data.
+                </p>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-xs text-muted-foreground hidden md:inline">
+                    Diperbarui: {{ formatDate(lastUpdated.toISOString()) }}
+                </span>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    @click="fetchStats"
+                    :disabled="isLoading"
+                >
+                    <RotateCw
+                        class="h-4 w-4 mr-2"
+                        :class="{ 'animate-spin': isLoading }"
+                    />
+                    Refresh
+                </Button>
+            </div>
+        </div>
 
-.layout-wrapper {
-  display: flex;
-  min-height: 100vh;
-  background-color: #f8fafc; /* Neutral Bg */
-  font-family: 'Poppins', sans-serif;
-}
+        <div
+            v-if="!stats && isLoading"
+            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+        >
+            <div
+                class="h-32 bg-muted rounded-xl animate-pulse"
+                v-for="i in 4"
+                :key="i"
+            ></div>
+        </div>
 
-.main-content {
-  flex: 1;
-  margin-left: 280px; /* Sidebar width */
-  display: flex;
-  flex-direction: column;
-}
+        <div v-else-if="stats" class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <Card
+                    class="border-l-4 border-l-primary shadow-sm hover:shadow-md transition-shadow"
+                >
+                    <CardHeader
+                        class="flex flex-row items-center justify-between space-y-0 pb-2"
+                    >
+                        <CardTitle
+                            class="text-sm font-medium text-muted-foreground"
+                        >
+                            Total Mahasiswa
+                        </CardTitle>
+                        <Users class="h-4 w-4 text-primary" />
+                    </CardHeader>
+                    <CardContent>
+                        <div class="text-2xl font-bold text-foreground">
+                            {{ formatNumber(stats.data.totalMahasiswa) }}
+                        </div>
+                        <p class="text-xs text-muted-foreground mt-1">
+                            Data profil aktif
+                        </p>
+                    </CardContent>
+                </Card>
 
-.content-body {
-  padding: 32px;
-  max-width: 1400px;
-  margin: 0 auto;
-  width: 100%;
-  box-sizing: border-box;
-}
+                <Card
+                    class="border-l-4 border-l-secondary shadow-sm hover:shadow-md transition-shadow"
+                >
+                    <CardHeader
+                        class="flex flex-row items-center justify-between space-y-0 pb-2"
+                    >
+                        <CardTitle
+                            class="text-sm font-medium text-muted-foreground"
+                        >
+                            Total Dosen
+                        </CardTitle>
+                        <GraduationCap class="h-4 w-4 text-secondary" />
+                    </CardHeader>
+                    <CardContent>
+                        <div class="text-2xl font-bold text-foreground">
+                            {{ formatNumber(stats.data.totalDosen) }}
+                        </div>
+                        <p class="text-xs text-muted-foreground mt-1">
+                            Data pengajar
+                        </p>
+                    </CardContent>
+                </Card>
 
-/* Welcome Banner */
-.welcome-banner {
-  background-color: #21308f; /* Primary */
-  padding: 1.5rem 2rem;
-  border-radius: 12px;
-  margin-bottom: 32px;
-  color: white;
-  box-shadow: 0 4px 6px -1px rgba(33, 48, 143, 0.2);
-}
+                <Card
+                    class="border-l-4 border-l-green-500 shadow-sm hover:shadow-md transition-shadow"
+                >
+                    <CardHeader
+                        class="flex flex-row items-center justify-between space-y-0 pb-2"
+                    >
+                        <CardTitle
+                            class="text-sm font-medium text-muted-foreground"
+                        >
+                            Rekam Nilai
+                        </CardTitle>
+                        <BookOpen class="h-4 w-4 text-green-600" />
+                    </CardHeader>
+                    <CardContent>
+                        <div class="text-2xl font-bold text-foreground">
+                            {{
+                                formatNumber(stats.data.totalDataAkademikNilai)
+                            }}
+                        </div>
+                        <p class="text-xs text-muted-foreground mt-1">
+                            Detail Nilai Mata Kuliah
+                        </p>
+                    </CardContent>
+                </Card>
 
-.welcome-title {
-  font-size: 1.75rem;
-  font-weight: 700;
-  margin: 0 0 8px 0;
-}
+                <Card
+                    class="border-l-4 border-l-amber-500 shadow-sm hover:shadow-md transition-shadow"
+                >
+                    <CardHeader
+                        class="flex flex-row items-center justify-between space-y-0 pb-2"
+                    >
+                        <CardTitle
+                            class="text-sm font-medium text-muted-foreground"
+                        >
+                            Rekam IP Semester
+                        </CardTitle>
+                        <ScrollText class="h-4 w-4 text-amber-600" />
+                    </CardHeader>
+                    <CardContent>
+                        <div class="text-2xl font-bold text-foreground">
+                            {{ formatNumber(stats.data.totalDataAkademikIp) }}
+                        </div>
+                        <p class="text-xs text-muted-foreground mt-1">
+                            Riwayat IPS & IPK
+                        </p>
+                    </CardContent>
+                </Card>
+            </div>
 
-.welcome-subtitle {
-  font-size: 1rem;
-  opacity: 0.9;
-  margin: 0;
-  font-weight: 300;
-}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle class="flex items-center gap-2">
+                            <Activity class="h-5 w-5 text-blue-500" />
+                            Status Antrian (Queue)
+                        </CardTitle>
+                        <CardDescription
+                            >Kondisi pemrosesan background job
+                            BullMQ</CardDescription
+                        >
+                    </CardHeader>
+                    <CardContent>
+                        <div class="grid grid-cols-3 gap-4 text-center">
+                            <div
+                                class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg"
+                            >
+                                <span
+                                    class="block text-2xl font-bold text-blue-600 dark:text-blue-400"
+                                >
+                                    {{ stats.queue.active }}
+                                </span>
+                                <span
+                                    class="text-xs text-muted-foreground font-medium"
+                                    >Active</span
+                                >
+                            </div>
+                            <div
+                                class="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg"
+                            >
+                                <span
+                                    class="block text-2xl font-bold text-orange-600 dark:text-orange-400"
+                                >
+                                    {{ stats.queue.waiting }}
+                                </span>
+                                <span
+                                    class="text-xs text-muted-foreground font-medium"
+                                    >Waiting</span
+                                >
+                            </div>
+                            <div
+                                class="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg"
+                            >
+                                <span
+                                    class="block text-2xl font-bold text-red-600 dark:text-red-400"
+                                >
+                                    {{ stats.queue.failed }}
+                                </span>
+                                <span
+                                    class="text-xs text-muted-foreground font-medium"
+                                    >Failed</span
+                                >
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
 
-/* Stats Grid */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(1, 1fr);
-  gap: 1.5rem; /* 24px */
-}
+                <Card>
+                    <CardHeader>
+                        <CardTitle class="flex items-center gap-2">
+                            <Clock class="h-5 w-5 text-purple-500" />
+                            Sinkronisasi Terakhir
+                        </CardTitle>
+                        <CardDescription
+                            >Riwayat eksekusi job terakhir kali</CardDescription
+                        >
+                    </CardHeader>
+                    <CardContent class="space-y-4">
+                        <div
+                            class="flex items-center justify-between p-3 border rounded-lg"
+                        >
+                            <span
+                                class="text-sm font-medium text-muted-foreground"
+                                >Status</span
+                            >
+                            <div class="flex items-center gap-2">
+                                <span
+                                    class="uppercase text-xs font-bold px-2 py-1 rounded-full"
+                                    :class="{
+                                        'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400':
+                                            stats.lastSync.status === 'success',
+                                        'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400':
+                                            stats.lastSync.status === 'failed',
+                                        'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400':
+                                            stats.lastSync.status ===
+                                                'running' ||
+                                            stats.lastSync.status === 'pending',
+                                    }"
+                                >
+                                    {{ stats.lastSync.status || "UNKNOWN" }}
+                                </span>
+                            </div>
+                        </div>
 
-@media (min-width: 640px) {
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
+                        <div
+                            class="flex items-center justify-between p-3 border rounded-lg"
+                        >
+                            <span
+                                class="text-sm font-medium text-muted-foreground"
+                                >Waktu Selesai</span
+                            >
+                            <span class="text-sm text-foreground font-medium">
+                                {{ formatDate(stats.lastSync.finishedAt) }}
+                            </span>
+                        </div>
 
-@media (min-width: 1024px) {
-  .stats-grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
-/* Stat Card */
-.stat-card {
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px; /* Radius 12px */
-  padding: 24px;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-}
-
-.card-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.text-content {
-  flex: 1;
-}
-
-.card-label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #64748b; /* Gray-500 */
-  margin: 0 0 4px 0;
-}
-
-.card-value {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: #21308f; /* Primary */
-  margin: 0;
-  line-height: 1.2;
-}
-
-.card-subtext {
-  font-size: 0.75rem;
-  color: #94a3b8;
-  margin-top: 4px;
-}
-
-/* Icon Box */
-.icon-box {
-  width: 65px;
-  height: 65px;
-  background-color: #21308f; /* Primary */
-  border-radius: 1rem; /* 16px */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  flex-shrink: 0;
-  margin-left: 16px;
-  box-shadow: 0 4px 6px -1px rgba(33, 48, 143, 0.3);
-}
-
-.icon-box.secondary {
-  background-color: #f6983e; /* Secondary */
-  box-shadow: 0 4px 6px -1px rgba(246, 152, 62, 0.3);
-}
-
-/* Badges & Status */
-.status-badge-wrapper {
-  margin: 4px 0;
-}
-
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 12px;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
-}
-
-.status-success {
-  background-color: #dcfce7;
-  color: #15803d;
-}
-
-.status-failed {
-  background-color: #fee2e2;
-  color: #b91c1c;
-}
-
-.status-pending {
-  background-color: #fef3c7;
-  color: #b45309;
-}
-
-.status-unknown {
-  background-color: #f1f5f9;
-  color: #64748b;
-}
-
-.badge-failed-mini {
-  font-size: 0.75rem;
-  background-color: #fee2e2;
-  color: #b91c1c;
-  padding: 2px 8px;
-  border-radius: 6px;
-  margin-left: 8px;
-  vertical-align: middle;
-  font-weight: 600;
-}
-
-.value-group {
-  display: flex;
-  align-items: center;
-}
-
-/* Loading & Error States */
-.state-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 64px;
-  background: white;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-}
-
-.spinner {
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #21308f;
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  animation: spin 1s linear infinite;
-  margin-bottom: 16px;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.error-icon {
-  color: #ef4444;
-  margin-bottom: 16px;
-}
-
-.retry-btn {
-  margin-top: 16px;
-  padding: 8px 24px;
-  background-color: #21308f;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.retry-btn:hover {
-  background-color: #3a4dc6;
-}
-</style>
+                        <div
+                            class="flex items-center justify-between p-3 border rounded-lg"
+                        >
+                            <span
+                                class="text-sm font-medium text-muted-foreground"
+                                >Durasi</span
+                            >
+                            <span class="text-sm text-foreground font-medium">
+                                {{ stats.lastSync.duration || "-" }}
+                            </span>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
+    </div>
+</template>

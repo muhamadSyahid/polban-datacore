@@ -1,0 +1,185 @@
+@import "tailwindcss";
+
+@plugin "tailwindcss-animate";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* 1. Import Font Poppins */
+/*@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap");*/
+
+/* 2. Apply Font Globally */
+body {
+    font-family: "Poppins", sans-serif;
+    @apply bg-background text-foreground;
+}
+
+/* 3. Define Theme Variables (Mapping) */
+@theme inline {
+    --font-sans: "Poppins", sans-serif;
+
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
+
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+
+    /* Charts can keep default or match branding */
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+
+    /* Sidebar specific variables */
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/* 4. Root Variables (Light Mode) - DataView Branding */
+:root {
+    --radius: 0.5rem; /* Standard rounded corners */
+
+    /* Base Backgrounds */
+    --background: #f8fafc; /* DataView: --color-gray-50 */
+    --foreground: #21308f; /* DataView: --color-primary (Text Main) */
+
+    /* Cards / Panels */
+    --card: #ffffff;
+    --card-foreground: #21308f;
+
+    --popover: #ffffff;
+    --popover-foreground: #21308f;
+
+    /* Primary Actions (Polban Blue) */
+    --primary: #21308f;
+    --primary-foreground: #ffffff;
+
+    /* Secondary Actions (Polban Orange) */
+    --secondary: #f6983e;
+    --secondary-foreground: #ffffff;
+
+    /* Muted Elements (Gray backgrounds) */
+    --muted: #f1f5f9; /* DataView: --color-gray-100 */
+    --muted-foreground: #64748b; /* DataView: --color-gray-500 */
+
+    /* Accent / Hover States */
+    --accent: #e2e8f0; /* Slightly darker than muted for visibility */
+    --accent-foreground: #21308f;
+
+    /* Destructive Actions */
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
+
+    /* Borders & Inputs */
+    --border: #cbd5e1; /* DataView: --color-gray-300 */
+    --input: #cbd5e1;
+    --ring: #21308f; /* Focus ring color */
+
+    /* Charts (Optional mapping) */
+    --chart-1: #21308f;
+    --chart-2: #f6983e;
+    --chart-3: #3a4dc6;
+    --chart-4: #de8836;
+    --chart-5: #64748b;
+
+    /* Sidebar Variables (Light) */
+    --sidebar: #ffffff;
+    --sidebar-foreground: #334155;
+    --sidebar-primary: #21308f;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #f1f5f9;
+    --sidebar-accent-foreground: #21308f;
+    --sidebar-border: #e2e8f0;
+    --sidebar-ring: #21308f;
+}
+
+/* 5. Dark Mode Variables - DataView Branding */
+.dark {
+    /* Base Backgrounds */
+    --background: #0f172a; /* DataView: --color-gray-900 */
+    --foreground: #f8fafc; /* DataView: --color-gray-50 */
+
+    /* Cards / Panels */
+    --card: #1e293b; /* DataView: --color-gray-800 */
+    --card-foreground: #f8fafc;
+
+    --popover: #1e293b;
+    --popover-foreground: #f8fafc;
+
+    /* Primary Actions (Lighter Blue for contrast) */
+    --primary: #3a4dc6; /* DataView: --color-primary-light */
+    --primary-foreground: #ffffff;
+
+    /* Secondary Actions (Keep Orange) */
+    --secondary: #f6983e;
+    --secondary-foreground: #ffffff;
+
+    /* Muted Elements */
+    --muted: #334155; /* DataView: --color-gray-700 */
+    --muted-foreground: #94a3b8; /* DataView: --color-gray-400 */
+
+    /* Accent / Hover States */
+    --accent: #1e293b;
+    --accent-foreground: #f8fafc;
+
+    /* Destructive Actions */
+    --destructive: #7f1d1d;
+    --destructive-foreground: #f8fafc;
+
+    /* Borders & Inputs */
+    --border: #334155;
+    --input: #334155;
+    --ring: #3a4dc6;
+
+    /* Charts Dark Mode */
+    --chart-1: #3a4dc6;
+    --chart-2: #f6983e;
+    --chart-3: #5468e6;
+    --chart-4: #de8836;
+    --chart-5: #94a3b8;
+
+    /* Sidebar Variables (Dark) */
+    --sidebar: #0f172a;
+    --sidebar-foreground: #f8fafc;
+    --sidebar-primary: #3a4dc6;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #1e293b;
+    --sidebar-accent-foreground: #f8fafc;
+    --sidebar-border: #334155;
+    --sidebar-ring: #3a4dc6;
+}
+
+@layer base {
+    * {
+        @apply border-border outline-ring/50;
+    }
+    body {
+        @apply bg-background text-foreground;
+    }
+}

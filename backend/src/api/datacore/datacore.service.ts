@@ -14,14 +14,21 @@ export class DataCoreService {
   ) {}
 
   async getDashboardStats(): Promise<DashboardStatsDto> {
-    const [lastJob, totalMhs, totalDosen, totalAkademik, jobCounts] =
-      await Promise.all([
-        this.etlRepository.getLastMainJobRun(),
-        this.etlRepository.getTotalFactMahasiswa(),
-        this.etlRepository.getTotalFactDosen(),
-        this.etlRepository.getTotalFactAkademik(),
-        this.etlQueue.getJobCounts('active', 'waiting', 'failed'),
-      ]);
+    const [
+      lastJob,
+      totalMhs,
+      totalDosen,
+      totalAkademikNilai,
+      totalAkademikIp,
+      jobCounts,
+    ] = await Promise.all([
+      this.etlRepository.getLastMainJobRun(),
+      this.etlRepository.getTotalFactMahasiswa(),
+      this.etlRepository.getTotalFactDosen(),
+      this.etlRepository.getTotalFactAkademikNilai(),
+      this.etlRepository.getTotalFactAkademikIp(),
+      this.etlQueue.getJobCounts('active', 'waiting', 'failed'),
+    ]);
 
     return {
       lastSync: {
@@ -37,7 +44,8 @@ export class DataCoreService {
       data: {
         totalMahasiswa: totalMhs,
         totalDosen: totalDosen,
-        totalDataAkademik: totalAkademik,
+        totalDataAkademikNilai: totalAkademikNilai,
+        totalDataAkademikIp: totalAkademikIp,
       },
     };
   }

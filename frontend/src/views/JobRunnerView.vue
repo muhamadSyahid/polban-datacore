@@ -1,559 +1,459 @@
-<template>
-  <div class="layout-wrapper">
-    <AppSidebar />
-    
-    <div class="main-content">
-      <AppHeader />
-      
-      <div class="content-body">
-        <div class="page-header">
-          <h1 class="page-title">ETL Job Runner</h1>
-          <p class="page-subtitle">Eksekusi manual proses ETL dan pantau riwayat sinkronisasi data.</p>
-        </div>
+<script setup lang="ts">
+import { ref, onMounted, computed } from "vue";
+import { toast } from "vue-sonner"; // Notification
+import { jobsService } from "@/api/jobs.service";
+import type { JobLog, JobSchedule } from "@/types/job.types";
 
-        <div class="job-runner-grid">
-          <!-- Run Job Card (Trigger) -->
-          <div class="job-card trigger-card">
-            <div class="card-header">
-              <h3>Jalankan Job Baru</h3>
-            </div>
-            
-            <div class="card-body">
-              <div class="form-group">
-                <label for="job-select">Pilih Job</label>
-                <div class="select-wrapper">
-                  <select id="job-select" v-model="selectedJob" class="form-select">
-                    <option value="" disabled>-- Pilih Job --</option>
-                    <option value="full-sync-and-aggregate">Full Sync & Agregasi (Mahasiswa & Akademik)</option>
-                    <option value="sync-mahasiswa">Sync Data Mahasiswa Saja</option>
-                    <option value="aggregate-guest">Hitung Ulang Cache Guest (Public)</option>
-                  </select>
-                  <div class="select-arrow">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                  </div>
-                </div>
-              </div>
+// Components
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+    Play,
+    History,
+    CalendarClock,
+    RefreshCw,
+    ChevronLeft,
+    ChevronRight,
+    Loader2,
+} from "lucide-vue-next";
 
-              <transition name="fade">
-                <div v-if="jobStore.success" class="alert alert-success">
-                  <div class="alert-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                  </div>
-                  <span>{{ jobStore.success }}</span>
-                </div>
-              </transition>
+// --- STATE: JOB RUNNER ---
+const logs = ref<JobLog[]>([]);
+const isLoadingLogs = ref(false);
+const pagination = ref({ page: 1, lastPage: 1, total: 0 });
+const isRunningJob = ref(false);
 
-              <transition name="fade">
-                <div v-if="jobStore.error" class="alert alert-error">
-                  <div class="alert-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                  </div>
-                  <span>{{ jobStore.error }}</span>
-                </div>
-              </transition>
+// --- STATE: SCHEDULER ---
+const schedules = ref<JobSchedule[]>([]);
+const isLoadingSchedules = ref(false);
+const selectedSchedule = ref<JobSchedule | null>(null); // For Edit Dialog
+const isEditDialogOpen = ref(false);
+const isUpdatingSchedule = ref(false);
+const editForm = ref({ cron: "", description: "" });
 
-              <button 
-                @click="handleRunJob" 
-                :disabled="!selectedJob || jobStore.loading" 
-                class="btn-primary"
-                :class="{ 'btn-loading': jobStore.loading }"
-              >
-                <span v-if="jobStore.loading" class="spinner"></span>
-                <span>{{ jobStore.loading ? 'Processing...' : 'Jalankan Job' }}</span>
-              </button>
-            </div>
-          </div>
+// --- FORMATTERS ---
+const formatDate = (dateStr?: string) => {
+    if (!dateStr) return "-";
+    return new Date(dateStr).toLocaleString("id-ID", {
+        day: "2-digit",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+    });
+};
 
-          <!-- Job History Card -->
-          <div class="job-card history-card">
-            <div class="card-header">
-              <h3>Riwayat Eksekusi</h3>
-              <button @click="jobStore.fetchHistory()" class="btn-refresh" title="Refresh History">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
-              </button>
-            </div>
-            <div class="card-body p-0">
-              <div class="table-responsive">
-                <table class="history-table">
-                  <thead>
-                    <tr>
-                      <th>Job Name</th>
-                      <th>Status</th>
-                      <th>Trigger</th>
-                      <th>Waktu Mulai</th>
-                      <th>Durasi</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-if="jobStore.historyLoading">
-                      <td colspan="5" class="text-center py-8">
-                        <div class="loading-state">
-                          <div class="spinner-blue"></div>
-                          <p>Memuat riwayat...</p>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr v-else-if="jobStore.history.length === 0">
-                      <td colspan="5" class="text-center py-8 text-gray-500">Belum ada riwayat eksekusi.</td>
-                    </tr>
-                    <tr v-else v-for="job in jobStore.history" :key="job.id" class="table-row">
-                      <td class="font-medium">{{ job.jobName }}</td>
-                      <td>
-                        <span :class="['badge', getStatusClass(job.status)]">
-                          {{ job.status }}
-                        </span>
-                      </td>
-                      <td class="text-gray-600">{{ job.trigger || 'Manual' }}</td>
-                      <td class="text-gray-600">{{ formatDate(job.startTime) }}</td>
-                      <td class="text-gray-600 font-mono">{{ formatDuration(job.duration) }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              
-              <!-- Pagination -->
-              <div class="pagination-controls" v-if="jobStore.pagination.lastPage > 1">
-                <button 
-                  @click="changePage(jobStore.pagination.currentPage - 1)"
-                  :disabled="jobStore.pagination.currentPage === 1"
-                  class="btn-pagination"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                  Previous
-                </button>
-                <span class="page-info">
-                  Page <strong>{{ jobStore.pagination.currentPage }}</strong> of {{ jobStore.pagination.lastPage }}
-                </span>
-                <button 
-                  @click="changePage(jobStore.pagination.currentPage + 1)"
-                  :disabled="jobStore.pagination.currentPage === jobStore.pagination.lastPage"
-                  class="btn-pagination"
-                >
-                  Next
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
+const getStatusBadge = (status: string) => {
+    switch (status) {
+        case "success":
+            return "bg-green-500 hover:bg-green-600";
+        case "failed":
+            return "destructive"; // Shadcn destructive variant
+        case "running":
+            return "bg-blue-500 hover:bg-blue-600 animate-pulse";
+        case "pending":
+            return "secondary";
+        default:
+            return "outline";
+    }
+};
 
-<script setup>
-import { ref, onMounted } from 'vue';
-import AppSidebar from '@/components/Layout/AppSidebar.vue';
-import AppHeader from '@/components/Layout/AppHeader.vue';
-import { useJobStore } from '@/stores/job';
+// --- ACTIONS: RUNNER ---
+const fetchLogs = async (page = 1) => {
+    isLoadingLogs.value = true;
+    try {
+        const res = await jobsService.getHistory(page);
+        logs.value = res.data;
+        pagination.value = {
+            page: res.meta.page,
+            lastPage: res.meta.lastPage,
+            total: res.meta.total,
+        };
+    } catch (err) {
+        toast.error("Gagal memuat riwayat job");
+    } finally {
+        isLoadingLogs.value = false;
+    }
+};
 
-const jobStore = useJobStore();
-const selectedJob = ref('');
+const triggerJob = async (jobName = "full-sync-and-aggregate") => {
+    isRunningJob.value = true;
+    try {
+        const res = await jobsService.runJob(jobName);
+        toast.success("Job Berhasil Dipicu", {
+            description: `Queue ID: ${res.queueId}`,
+        });
+        // Auto refresh logs after 2 seconds
+        setTimeout(() => fetchLogs(1), 2000);
+    } catch (err: any) {
+        toast.error("Gagal memicu job", {
+            description: err.response?.data?.message || "Server Error",
+        });
+    } finally {
+        isRunningJob.value = false;
+    }
+};
+
+// --- ACTIONS: SCHEDULER ---
+const fetchSchedules = async () => {
+    isLoadingSchedules.value = true;
+    try {
+        const res = await jobsService.getSchedules();
+        schedules.value = res.data;
+    } catch (err) {
+        toast.error("Gagal memuat jadwal");
+    } finally {
+        isLoadingSchedules.value = false;
+    }
+};
+
+const openEditDialog = (schedule: JobSchedule) => {
+    selectedSchedule.value = schedule;
+    editForm.value = {
+        cron: schedule.cronExpression,
+        description: schedule.description || "",
+    };
+    isEditDialogOpen.value = true;
+};
+
+const saveSchedule = async () => {
+    if (!selectedSchedule.value) return;
+
+    isUpdatingSchedule.value = true;
+    try {
+        await jobsService.updateSchedule({
+            jobName: selectedSchedule.value.jobName,
+            cronExpression: editForm.value.cron,
+            description: editForm.value.description,
+        });
+        toast.success("Jadwal Berhasil Diupdate");
+        isEditDialogOpen.value = false;
+        fetchSchedules();
+    } catch (err: any) {
+        toast.error("Gagal update jadwal", {
+            description:
+                err.response?.data?.message || "Pastikan Cron Expression Valid",
+        });
+    } finally {
+        isUpdatingSchedule.value = false;
+    }
+};
 
 onMounted(() => {
-  jobStore.fetchHistory();
+    fetchLogs();
+    fetchSchedules();
 });
-
-const handleRunJob = () => {
-  if (selectedJob.value) {
-    jobStore.triggerJob(selectedJob.value);
-  }
-};
-
-const changePage = (page) => {
-  jobStore.fetchHistory(page);
-};
-
-const formatDate = (dateString) => {
-  if (!dateString) return '-';
-  const date = new Date(dateString);
-  return new Intl.DateTimeFormat('id-ID', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(date);
-};
-
-const formatDuration = (seconds) => {
-  if (!seconds && seconds !== 0) return '-';
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return `${minutes}m ${remainingSeconds}s`;
-};
-
-const getStatusClass = (status) => {
-  switch (status?.toUpperCase()) {
-    case 'SUCCESS': return 'badge-success';
-    case 'FAILED': return 'badge-error';
-    case 'RUNNING': return 'badge-running';
-    default: return 'badge-default';
-  }
-};
 </script>
 
-<style scoped>
-.layout-wrapper {
-  display: flex;
-  min-height: 100vh;
-  background-color: #f8f9fa;
-  font-family: 'Poppins', sans-serif;
-}
+<template>
+    <div class="space-y-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold tracking-tight text-foreground">
+                    Job Runner
+                </h1>
+                <p class="text-muted-foreground">
+                    Orkestrasi sinkronisasi data (ETL) dan penjadwalan.
+                </p>
+            </div>
+            <Button
+                @click="triggerJob()"
+                :disabled="isRunningJob"
+                class="shadow-lg shadow-primary/20"
+            >
+                <Play class="w-4 h-4 mr-2" :class="{ hidden: isRunningJob }" />
+                <Loader2
+                    v-if="isRunningJob"
+                    class="w-4 h-4 mr-2 animate-spin"
+                />
+                {{ isRunningJob ? "Queueing..." : "Trigger Full Sync" }}
+            </Button>
+        </div>
 
-.main-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  margin-left: 280px;
-}
+        <Tabs default-value="history" class="w-full">
+            <TabsList class="mb-4">
+                <TabsTrigger value="history" class="flex items-center gap-2">
+                    <History class="w-4 h-4" /> Riwayat Eksekusi
+                </TabsTrigger>
+                <TabsTrigger value="schedule" class="flex items-center gap-2">
+                    <CalendarClock class="w-4 h-4" /> Penjadwalan (Cron)
+                </TabsTrigger>
+            </TabsList>
 
-.content-body {
-  padding: 2rem;
-  max-width: 1600px;
-  margin: 0 auto;
-  width: 100%;
-}
+            <TabsContent value="history">
+                <Card>
+                    <CardHeader>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <CardTitle>Log Eksekusi</CardTitle>
+                                <CardDescription
+                                    >Daftar riwayat job yang telah
+                                    dijalankan.</CardDescription
+                                >
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                @click="fetchLogs(pagination.page)"
+                                :disabled="isLoadingLogs"
+                            >
+                                <RefreshCw
+                                    class="w-4 h-4"
+                                    :class="{ 'animate-spin': isLoadingLogs }"
+                                />
+                            </Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div class="rounded-md border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Job Name</TableHead>
+                                        <TableHead>Trigger</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead>Waktu Mulai</TableHead>
+                                        <TableHead>Durasi</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    <TableRow v-if="isLoadingLogs">
+                                        <TableCell
+                                            colspan="5"
+                                            class="h-24 text-center text-muted-foreground"
+                                            >Memuat data...</TableCell
+                                        >
+                                    </TableRow>
+                                    <TableRow v-else-if="logs.length === 0">
+                                        <TableCell
+                                            colspan="5"
+                                            class="h-24 text-center text-muted-foreground"
+                                            >Belum ada riwayat job.</TableCell
+                                        >
+                                    </TableRow>
+                                    <TableRow v-for="log in logs" :key="log.id">
+                                        <TableCell class="font-medium">{{
+                                            log.jobName
+                                        }}</TableCell>
+                                        <TableCell>
+                                            <Badge
+                                                variant="outline"
+                                                class="capitalize"
+                                                >{{ log.triggeredBy }}</Badge
+                                            >
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge
+                                                :class="
+                                                    getStatusBadge(log.status)
+                                                "
+                                                >{{ log.status }}</Badge
+                                            >
+                                            <div
+                                                v-if="log.status === 'failed'"
+                                                class="text-xs text-red-500 mt-1 max-w-[200px] truncate"
+                                                :title="log.logMessage"
+                                            >
+                                                {{ log.logMessage }}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell class="text-xs">{{
+                                            formatDate(log.startTime)
+                                        }}</TableCell>
+                                        <TableCell class="text-xs">{{
+                                            log.duration || "-"
+                                        }}</TableCell>
+                                    </TableRow>
+                                </TableBody>
+                            </Table>
+                        </div>
 
-.page-header {
-  margin-bottom: 2rem;
-}
+                        <div
+                            class="flex items-center justify-end space-x-2 py-4"
+                        >
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                :disabled="
+                                    pagination.page <= 1 || isLoadingLogs
+                                "
+                                @click="fetchLogs(pagination.page - 1)"
+                            >
+                                <ChevronLeft class="h-4 w-4" />
+                            </Button>
+                            <div class="text-sm font-medium">
+                                Page {{ pagination.page }} of
+                                {{ pagination.lastPage }}
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                :disabled="
+                                    pagination.page >= pagination.lastPage ||
+                                    isLoadingLogs
+                                "
+                                @click="fetchLogs(pagination.page + 1)"
+                            >
+                                <ChevronRight class="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            </TabsContent>
 
-.page-title {
-  font-size: 1.75rem;
-  font-weight: 600;
-  color: #1a1a1a;
-  margin-bottom: 0.5rem;
-}
+            <TabsContent value="schedule">
+                <Card>
+                    <CardHeader>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <CardTitle>Jadwal Otomatis</CardTitle>
+                                <CardDescription
+                                    >Konfigurasi Cron Job untuk sinkronisasi
+                                    otomatis.</CardDescription
+                                >
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                @click="fetchSchedules"
+                                :disabled="isLoadingSchedules"
+                            >
+                                <RefreshCw
+                                    class="w-4 h-4"
+                                    :class="{
+                                        'animate-spin': isLoadingSchedules,
+                                    }"
+                                />
+                            </Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div class="rounded-md border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Job Name</TableHead>
+                                        <TableHead>Cron Expression</TableHead>
+                                        <TableHead>Deskripsi</TableHead>
+                                        <TableHead>Aksi</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    <TableRow
+                                        v-for="sch in schedules"
+                                        :key="sch.id"
+                                    >
+                                        <TableCell class="font-medium">{{
+                                            sch.jobName
+                                        }}</TableCell>
+                                        <TableCell>
+                                            <code
+                                                class="bg-muted px-2 py-1 rounded text-sm font-mono"
+                                                >{{ sch.cronExpression }}</code
+                                            >
+                                        </TableCell>
+                                        <TableCell>{{
+                                            sch.description || "-"
+                                        }}</TableCell>
+                                        <TableCell>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                @click="openEditDialog(sch)"
+                                                >Edit</Button
+                                            >
+                                        </TableCell>
+                                    </TableRow>
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </CardContent>
+                </Card>
+            </TabsContent>
+        </Tabs>
 
-.page-subtitle {
-  color: #6c757d;
-  font-size: 1rem;
-}
+        <Dialog v-model:open="isEditDialogOpen">
+            <DialogContent class="sm:max-w-[500px]">
+                <DialogHeader>
+                    <DialogTitle
+                        >Edit Jadwal:
+                        {{ selectedSchedule?.jobName }}</DialogTitle
+                    >
+                    <DialogDescription>
+                        Ubah konfigurasi waktu eksekusi job ini.
+                    </DialogDescription>
+                </DialogHeader>
 
-/* Grid Layout */
-.job-runner-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2rem;
-}
+                <div class="grid gap-6 py-4">
+                    <div class="grid gap-2">
+                        <Label for="cron">Cron Expression</Label>
+                        <Input
+                            id="cron"
+                            v-model="editForm.cron"
+                            class="font-mono"
+                            placeholder="* * * * *"
+                        />
+                        <p class="text-[0.8rem] text-muted-foreground">
+                            Contoh: <code>0 0 * * *</code> (Setiap tengah
+                            malam), <code>*/30 * * * *</code> (Tiap 30 menit).
+                        </p>
+                    </div>
 
-@media (min-width: 1024px) {
-  .job-runner-grid {
-    grid-template-columns: 350px 1fr;
-    align-items: start;
-  }
-}
+                    <div class="grid gap-2">
+                        <Label for="desc">Deskripsi</Label>
+                        <Textarea
+                            id="desc"
+                            v-model="editForm.description"
+                            class="resize-none"
+                            rows="3"
+                            placeholder="Jelaskan tujuan jadwal ini..."
+                        />
+                    </div>
+                </div>
 
-/* Cards */
-.job-card {
-  background: white;
-  border-radius: 1rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-  overflow: hidden;
-  border: 1px solid #f1f5f9;
-}
-
-.card-header {
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid #f1f5f9;
-  background-color: #fff;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.card-header h3 {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #21308f;
-}
-
-.card-body {
-  padding: 1.5rem;
-}
-
-.card-body.p-0 {
-  padding: 0;
-}
-
-/* Form Elements */
-.form-group {
-  margin-bottom: 1.5rem;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: #475569;
-  font-size: 0.95rem;
-}
-
-.select-wrapper {
-  position: relative;
-}
-
-.form-select {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  padding-right: 2.5rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.5rem;
-  font-size: 0.95rem;
-  color: #1e293b;
-  background-color: #fff;
-  transition: all 0.2s;
-  appearance: none;
-  cursor: pointer;
-}
-
-.form-select:focus {
-  outline: none;
-  border-color: #21308f;
-  box-shadow: 0 0 0 3px rgba(33, 48, 143, 0.1);
-}
-
-.select-arrow {
-  position: absolute;
-  right: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
-  pointer-events: none;
-  color: #64748b;
-}
-
-/* Buttons */
-.btn-primary {
-  width: 100%;
-  padding: 0.875rem;
-  background-color: #21308f;
-  color: white;
-  border: none;
-  border-radius: 0.5rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background-color: #1a2675;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(33, 48, 143, 0.2);
-}
-
-.btn-primary:disabled {
-  background-color: #94a3b8;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-.btn-refresh {
-  background: none;
-  border: none;
-  color: #64748b;
-  cursor: pointer;
-  padding: 0.5rem;
-  border-radius: 0.375rem;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btn-refresh:hover {
-  background-color: #f1f5f9;
-  color: #21308f;
-}
-
-/* Alerts */
-.alert {
-  padding: 1rem;
-  border-radius: 0.5rem;
-  margin-bottom: 1.5rem;
-  font-size: 0.9rem;
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-}
-
-.alert-icon {
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.alert-success {
-  background-color: #f0fdf4;
-  color: #166534;
-  border: 1px solid #bbf7d0;
-}
-
-.alert-error {
-  background-color: #fef2f2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
-}
-
-/* Table Styles */
-.table-responsive {
-  overflow-x: auto;
-}
-
-.history-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-}
-
-.history-table th {
-  background-color: #f8fafc;
-  color: #475569;
-  font-weight: 600;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid #e2e8f0;
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.history-table td {
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid #f1f5f9;
-  color: #334155;
-  font-size: 0.95rem;
-  vertical-align: middle;
-}
-
-.table-row:hover td {
-  background-color: #f8fafc;
-}
-
-.table-row:last-child td {
-  border-bottom: none;
-}
-
-/* Badges */
-.badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  line-height: 1;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
-}
-
-.badge-success {
-  background-color: #dcfce7;
-  color: #15803d;
-}
-
-.badge-error {
-  background-color: #fee2e2;
-  color: #b91c1c;
-}
-
-.badge-running {
-  background-color: #dbeafe;
-  color: #1d4ed8;
-}
-
-.badge-default {
-  background-color: #f1f5f9;
-  color: #475569;
-}
-
-/* Pagination */
-.pagination-controls {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 1.5rem;
-  border-top: 1px solid #e2e8f0;
-  background-color: #fff;
-}
-
-.btn-pagination {
-  padding: 0.5rem 1rem;
-  border: 1px solid #e2e8f0;
-  background-color: white;
-  border-radius: 0.375rem;
-  color: #475569;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.btn-pagination:hover:not(:disabled) {
-  background-color: #f8fafc;
-  border-color: #cbd5e1;
-  color: #21308f;
-}
-
-.btn-pagination:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  background-color: #f1f5f9;
-}
-
-.page-info {
-  font-size: 0.875rem;
-  color: #64748b;
-}
-
-/* Loading Spinner */
-.spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  border-top-color: white;
-  animation: spin 0.8s linear infinite;
-}
-
-.spinner-blue {
-  width: 24px;
-  height: 24px;
-  border: 3px solid #e2e8f0;
-  border-radius: 50%;
-  border-top-color: #21308f;
-  animation: spin 0.8s linear infinite;
-  margin: 0 auto 0.5rem;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* Transitions */
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
-/* Utilities */
-.text-center { text-align: center; }
-.py-8 { padding-top: 2rem; padding-bottom: 2rem; }
-.text-gray-500 { color: #64748b; }
-.text-gray-600 { color: #475569; }
-.font-medium { font-weight: 500; }
-.font-mono { font-family: 'Roboto Mono', monospace; font-size: 0.85rem; }
-</style>
+                <DialogFooter>
+                    <Button variant="outline" @click="isEditDialogOpen = false"
+                        >Batal</Button
+                    >
+                    <Button
+                        @click="saveSchedule"
+                        :disabled="isUpdatingSchedule"
+                    >
+                        <Loader2
+                            v-if="isUpdatingSchedule"
+                            class="mr-2 h-4 w-4 animate-spin"
+                        />
+                        Simpan Perubahan
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    </div>
+</template>

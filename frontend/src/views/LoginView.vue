@@ -1,146 +1,137 @@
-<template>
-  <div class="login-container">
-    <h2>Login</h2>
-    <form @submit.prevent="handleLogin">
-      <div class="form-group">
-        <label for="username">Username/Email</label>
-        <input 
-          type="text" 
-          id="email"
-          v-model="username"
-          required
-          placeholder="Enter username or email"
-          autocomplete="username"
-        />
-      </div>
-      <div class="form-group">
-        <label for="password">Password</label>
-        <input 
-          type="password" 
-          id="password" 
-          v-model="password" 
-          required
-          placeholder="Enter password"
-          autocomplete="current-password"
-        />
-      </div>
-      <div v-if="authStore.error" class="error-message alert alert-danger">
-        {{ authStore.error }}
-      </div>
-      <button type="submit" :disabled="authStore.loading" class="login-btn">
-        <span v-if="authStore.loading" class="spinner"></span>
-        {{ authStore.loading ? 'Logging in...' : 'Login' }}
-      </button>
-    </form>
-  </div>
-</template>
+<script setup lang="ts">
+import { ref } from "vue";
+import { useRouter } from "vue-router";
+import { useAuthStore } from "../stores/auth.store";
+import { authService } from "../api/auth.service";
+import { AxiosError } from "axios";
 
-<script setup>
-import { ref } from 'vue';
-import { useAuthStore } from '@/stores/auth';
-import { useRouter } from 'vue-router';
+// Import Shadcn Components
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardFooter,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Loader2, AlertCircle } from "lucide-vue-next";
 
-const username = ref('');
-const password = ref('');
-const authStore = useAuthStore();
+const appVersion = import.meta.env.VITE_APP_VERSION;
+
 const router = useRouter();
+const authStore = useAuthStore();
+
+const email = ref("");
+const password = ref("");
+const isLoading = ref(false);
+const errorMessage = ref("");
 
 const handleLogin = async () => {
-  if (!username.value || !password.value) {
-    return;
-  }
-  
-  try {
-    await authStore.login({
-      username: username.value,
-      password: password.value
-    });
-    router.push('/dashboard');
-  } catch (e) {
-    if (e.response) {
-      if (e.response.status === 401 || e.response.status === 400) {
-        authStore.error = "Username atau Password salah.";
-      } else if (e.response.status === 500) {
-        authStore.error = "Terjadi kesalahan internal pada server DataHub.";
-      } else {
-        authStore.error = e.response.data?.message || "Terjadi kesalahan saat login";
-      }
-    } else {
-      authStore.error = "Gagal terhubung ke DataCore Backend. Periksa koneksi internet atau VPN kampus.";
+    // Reset state
+    isLoading.value = true;
+    errorMessage.value = "";
+
+    try {
+        // 1. Panggil API Login
+        const response = await authService.login({
+            email: email.value,
+            password: password.value,
+        });
+
+        // 2. Simpan ke Pinia (State & LocalStorage)
+        authStore.setAuth(response.token, response.user);
+
+        // 3. Redirect ke Dashboard
+        router.push("/");
+    } catch (error: any) {
+        console.error("Login Failed:", error);
+
+        // Handle Error Message dari Backend
+        if (error instanceof AxiosError && error.response) {
+            // Mengambil pesan error dari response backend (jika ada)
+            errorMessage.value =
+                error.response.data.message || "Email atau password salah.";
+        } else {
+            errorMessage.value = "Terjadi kesalahan jaringan. Coba lagi nanti.";
+        }
+    } finally {
+        isLoading.value = false;
     }
-  }
 };
 </script>
 
-<style scoped>
-.login-container {
-  max-width: 400px;
-  margin: 50px auto;
-  padding: 30px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
-h2 {
-  text-align: center;
-  margin-bottom: 20px;
-}
-.form-group {
-  margin-bottom: 15px;
-}
-.form-group label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: bold;
-}
-.form-group input {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  box-sizing: border-box;
-}
-.error-message {
-  color: #721c24;
-  margin-bottom: 15px;
-  text-align: center;
-  padding: 10px;
-  background-color: #f8d7da;
-  border: 1px solid #f5c6cb;
-  border-radius: 4px;
-}
-.login-btn {
-  width: 100%;
-  padding: 12px;
-  background-color: #42b983;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 16px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-.login-btn:disabled {
-  background-color: #a0dcb6;
-  cursor: not-allowed;
-}
-.login-btn:hover:not(:disabled) {
-  background-color: #3aa876;
-}
-.spinner {
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #fff;
-  border-radius: 50%;
-  width: 16px;
-  height: 16px;
-  animation: spin 1s linear infinite;
-  margin-right: 10px;
-}
+<template>
+    <div
+        class="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-4"
+    >
+        <Card class="w-full max-w-md shadow-lg border-t-4 border-t-primary">
+            <CardHeader class="space-y-1 text-center">
+                <CardTitle class="text-2xl font-bold text-primary">
+                    Polban DataCore
+                </CardTitle>
+                <CardDescription>
+                    Masuk untuk mengelola agregasi data
+                </CardDescription>
+            </CardHeader>
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-</style>
+            <CardContent>
+                <form @submit.prevent="handleLogin" class="space-y-4">
+                    <Alert v-if="errorMessage" variant="destructive">
+                        <AlertCircle class="h-4 w-4" />
+                        <AlertTitle>Gagal Masuk</AlertTitle>
+                        <AlertDescription>
+                            {{ errorMessage }}
+                        </AlertDescription>
+                    </Alert>
+
+                    <div class="space-y-2">
+                        <Label for="email">Email Admin</Label>
+                        <Input
+                            id="email"
+                            type="email"
+                            placeholder="xxx@polban.ac.id"
+                            v-model="email"
+                            required
+                            :disabled="isLoading"
+                        />
+                    </div>
+
+                    <div class="space-y-2">
+                        <Label for="password">Password</Label>
+                        <Input
+                            id="password"
+                            type="password"
+                            v-model="password"
+                            placeholder="password"
+                            required
+                            :disabled="isLoading"
+                        />
+                    </div>
+
+                    <Button
+                        type="submit"
+                        class="w-full font-semibold"
+                        :disabled="isLoading"
+                    >
+                        <Loader2
+                            v-if="isLoading"
+                            class="mr-2 h-4 w-4 animate-spin"
+                        />
+                        {{ isLoading ? "Memproses..." : "Masuk Dashboard" }}
+                    </Button>
+                </form>
+            </CardContent>
+
+            <CardFooter
+                class="flex flex-col space-y-2 text-center text-xs text-muted-foreground"
+            >
+                <p>Politeknik Negeri Bandung &copy; 2025</p>
+                <p>Polban DataCore {{ appVersion }}</p>
+            </CardFooter>
+        </Card>
+    </div>
+</template>
