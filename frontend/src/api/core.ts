@@ -1,10 +1,10 @@
-import axios, { type AxiosInstance } from "axios";
-import { useAuthStore } from "../stores/auth.store";
+import axios, { type AxiosInstance } from 'axios';
+import { useAuthStore } from '../stores/auth.store';
 
 const apiClient: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
   headers: {
-    "Content-Type": "application/json",
+    'Content-Type': 'application/json',
   },
 });
 
@@ -23,7 +23,7 @@ apiClient.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       const authStore = useAuthStore();
-      authStore.logout(); // Redirect ke login otomatis via router guard nanti
+      authStore.logout();
     }
     return Promise.reject(error);
   },

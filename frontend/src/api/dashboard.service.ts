@@ -1,29 +1,10 @@
-import apiClient from "./core";
-
-// Definisi Tipe Data (DTO) sesuai response backend
-export interface DashboardStats {
-  lastSync: {
-    status: "success" | "failed" | "running" | "pending";
-    finishedAt: string | null;
-    duration: string | null;
-  };
-  queue: {
-    active: number;
-    waiting: number;
-    failed: number;
-  };
-  data: {
-    totalMahasiswa: number;
-    totalDosen: number;
-    totalDataAkademikNilai: number;
-    totalDataAkademikIp: number;
-  };
-}
+import apiClient from './core';
+import type { DashboardStatsResponse } from '@/types/dashboard.types';
 
 export const dashboardService = {
-  async getStats(): Promise<DashboardStats> {
-    const response = await apiClient.get<DashboardStats>(
-      "/api/datacore/dashboard/stats",
+  async getStats(): Promise<DashboardStatsResponse> {
+    const response = await apiClient.get<DashboardStatsResponse>(
+      '/api/datacore/dashboard/stats',
     );
     return response.data;
   },

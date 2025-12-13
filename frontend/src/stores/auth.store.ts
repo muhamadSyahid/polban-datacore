@@ -1,18 +1,12 @@
-import { defineStore } from "pinia";
-import { ref, computed } from "vue";
-import { useStorage, StorageSerializers } from "@vueuse/core";
-import router from "../router";
+import { defineStore } from 'pinia';
+import { computed } from 'vue';
+import { useStorage, StorageSerializers } from '@vueuse/core';
+import type { User } from '@/types/auth.types';
+import router from '../router';
 
-interface User {
-  id: number;
-  email: string;
-  role: string;
-  name?: string;
-}
-
-export const useAuthStore = defineStore("auth", () => {
-  const token = useStorage<string | null>("datacore-token", null);
-  const user = useStorage<User | null>("datacore-user", null, localStorage, {
+export const useAuthStore = defineStore('auth', () => {
+  const token = useStorage<string | null>('datacore-token', null);
+  const user = useStorage<User | null>('datacore-user', null, localStorage, {
     serializer: StorageSerializers.object,
   });
 
@@ -28,7 +22,7 @@ export const useAuthStore = defineStore("auth", () => {
   function logout() {
     token.value = null;
     user.value = null;
-    router.push("/login");
+    router.push('/login');
   }
 
   return { token, user, isAuthenticated, setAuth, logout };

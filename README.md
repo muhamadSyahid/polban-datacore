@@ -64,9 +64,10 @@ Sistem melakukan request HTTP ke API DataHub menggunakan `DataHubService`.
 
 Data mentah disimpan ke dalam tabel "Fact" di database PostgreSQL menggunakan `EtlRepository`.
 
-- `FactMahasiswa`
-- `FactDosen`
-- `FactAkademik`
+- `fact_mahasiswa`
+- `fact_dosen`
+- `fact_akademik_nilai`
+- `fact_akademik_ip`
 
 ### 3. Transform & Aggregate (Pengolahan)
 
@@ -91,7 +92,7 @@ Data yang sudah teragregasi di Materialized View disajikan melalui REST API. Unt
 - **Language**: [TypeScript](https://www.typescriptlang.org/) - Superset JavaScript dengan tipe data statis.
 - **Database**: [PostgreSQL](https://www.postgresql.org/) - Database relasional open source.
 - **ORM**: [Drizzle ORM](https://orm.drizzle.team/) - ORM TypeScript yang ringan dan performant.
-- **Caching**: [Redis](https://redis.io/) - In-memory data store untuk caching respon API.
+- **Caching & Queue**: [Redis](https://redis.io/) - In-memory data store untuk caching respon API.
 - **HTTP Client**: Axios (via `@nestjs/axios`).
 - **Job Scheduling**: Cron (via `@nestjs/schedule`).
 
@@ -99,7 +100,7 @@ Data yang sudah teragregasi di Materialized View disajikan melalui REST API. Unt
 
 - **Framework**: [Vue.js](https://vuejs.org/)
 - **Build Tool**: [Vite](https://vitejs.dev/)
-- **Styling**: Custom CSS dengan CSS Variables
+- **Styling**: TailwindCSS, shadcn dengan CSS Variables
 
 ---
 

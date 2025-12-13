@@ -1,8 +1,8 @@
 export interface JobLog {
   id: string;
   jobName: string;
-  status: "pending" | "running" | "success" | "failed";
-  triggeredBy: "cron" | "manual" | "webhook";
+  status: 'pending' | 'running' | 'success' | 'failed';
+  triggeredBy: 'cron' | 'manual' | 'webhook';
   startTime: string;
   endTime?: string;
   duration?: string;

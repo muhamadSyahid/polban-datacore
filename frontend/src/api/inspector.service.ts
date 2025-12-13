@@ -1,20 +1,11 @@
-import apiClient from "./core";
-
-export interface InspectorResponse {
-  data: any[];
-  meta: {
-    total: number;
-    page: number;
-    perPage: number;
-    lastPage: number;
-  };
-}
+import apiClient from './core';
+import type { InspectorResponse } from '@/types/inspector.types';
 
 export const inspectorService = {
   // Ambil daftar nama MV (mv_mahasiswa_gender, dll)
   async getMvList(): Promise<string[]> {
     const response = await apiClient.get<{ data: string[] }>(
-      "/api/datacore/inspector/mv",
+      '/api/datacore/inspector/mv',
     );
     return response.data.data;
   },
@@ -24,7 +15,7 @@ export const inspectorService = {
     mvName: string,
     page = 1,
     limit = 10,
-    search = "",
+    search = '',
   ): Promise<InspectorResponse> {
     const response = await apiClient.get<InspectorResponse>(
       `/api/datacore/inspector/mv/${mvName}`,
