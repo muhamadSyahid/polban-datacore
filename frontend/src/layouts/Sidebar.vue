@@ -64,7 +64,7 @@ const isActive = (path: string) => {
                 class="flex items-center px-3 py-2.5 rounded-md transition-colors duration-200 group"
                 :class="[
                     isActive(item.path)
-                        ? 'bg-primary/10 text-primary dark:text-secondary font-medium'
+                        ? 'bg-primary/10 dark:bg-secondary/10 text-primary dark:text-secondary font-medium'
                         : 'text-muted-foreground hover:bg-accent hover:text-foreground',
                 ]"
             >
