@@ -25,7 +25,11 @@ export class JobsService implements OnModuleInit {
       jobName: dto.jobName,
       triggeredBy: 'manual',
     });
-    return { message: `Job queued.`, id: job.id };
+    return {
+      message: `Job queued.`,
+      queueId: job.id,
+      timestamp: new Date(job.timestamp),
+    };
   }
 
   // Schedules

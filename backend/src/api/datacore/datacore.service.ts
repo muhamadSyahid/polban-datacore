@@ -66,6 +66,7 @@ export class DataCoreService {
       startTime: log.startTime,
       endTime: log.endTime,
       duration: this.calculateDuration(log.startTime, log.endTime),
+      logMessage: log.logMessage,
     }));
 
     return {
