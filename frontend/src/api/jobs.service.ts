@@ -6,7 +6,13 @@ import type {
 } from '@/types/job.types';
 
 export const jobsService = {
-  // Get History (Paginated)
+  // Get Available Jobs
+  async getAvailableJobs(): Promise<string[]> {
+    const response = await apiClient.get<{ data: string[] }>('/api/jobs');
+    return response.data.data;
+  },
+
+  // Get History
   async getHistory(page = 1, limit = 10): Promise<JobHistoryResponse> {
     const response = await apiClient.get<JobHistoryResponse>(
       '/api/datacore/jobs/history',
@@ -36,10 +42,19 @@ export const jobsService = {
   // Update Schedule
   async updateSchedule(payload: {
     jobName: string;
-    cronExpression: string;
+    cronExpression?: string;
     description?: string;
+    isActive?: boolean;
   }) {
     const response = await apiClient.put('/api/jobs/schedules', payload);
+    return response.data;
+  },
+
+  // Delete Schedule
+  async deleteSchedule(jobName: string) {
+    const response = await apiClient.delete('/api/jobs/schedules', {
+      data: { jobName },
+    });
     return response.data;
   },
 };

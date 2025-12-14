@@ -3,7 +3,6 @@ import { ref, onMounted } from 'vue';
 import { toast } from 'vue-sonner';
 import { jobsService } from '@/api/jobs.service';
 import type { JobLog, JobSchedule } from '@/types/job.types';
-import { JOB_NAME_OPTIONS } from '@/constants/job-names'; // Import Constant
 
 // Components
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -42,6 +41,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   Play,
   History,
@@ -50,8 +50,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
-  Plus, // Icon Tambah
-  Pencil, // Icon Edit
+  Plus,
+  Pencil,
+  Trash2,
+  List,
 } from 'lucide-vue-next';
 
 // --- STATE: JOB RUNNER ---
@@ -72,42 +74,29 @@ const openLogDetail = (log: JobLog) => {
 
 // --- STATE: SCHEDULER ---
 const schedules = ref<JobSchedule[]>([]);
+const availableJobs = ref<string[]>([]);
 const isLoadingSchedules = ref(false);
 const isDialogOpen = ref(false);
 const isUpdatingSchedule = ref(false);
-const dialogMode = ref<'create' | 'edit'>('create'); // Mode Dialog
+const dialogMode = ref<'create' | 'edit'>('create');
 
 // Form State
 const editForm = ref({
   jobName: '',
   cron: '',
   description: '',
+  isActive: true,
 });
 
-// --- FORMATTERS ---
-const formatDate = (dateStr?: string) => {
-  if (!dateStr) return '-';
-  return new Date(dateStr).toLocaleString('id-ID', {
-    day: '2-digit',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
-};
+// --- ACTIONS ---
 
-const getStatusBadge = (status: string) => {
-  switch (status) {
-    case 'success':
-      return 'bg-green-500 hover:bg-green-600';
-    case 'failed':
-      return 'bg-red-500 dark:bg-red-600';
-    case 'running':
-      return 'bg-blue-500 hover:bg-blue-600 animate-pulse';
-    case 'pending':
-      return 'secondary';
-    default:
-      return 'outline';
+// 1. Fetch Available Jobs (Dynamic Dropdown)
+const fetchAvailableJobs = async () => {
+  try {
+    const jobs = await jobsService.getAvailableJobs();
+    availableJobs.value = jobs;
+  } catch (err) {
+    console.error('Failed to load available jobs');
   }
 };
 
@@ -161,24 +150,60 @@ const fetchSchedules = async () => {
   }
 };
 
-// Open Dialog for Create
+// Toggle Active Status
+const toggleScheduleStatus = async (schedule: JobSchedule, newVal: boolean) => {
+  try {
+    // Optimistic Update (ubah UI dulu)
+    schedule.isActive = newVal;
+
+    await jobsService.updateSchedule({
+      jobName: schedule.jobName,
+      isActive: newVal,
+    });
+    toast.success(`Jadwal ${newVal ? 'Diaktifkan' : 'Dinonaktifkan'}`);
+  } catch (err) {
+    // Revert jika gagal
+    schedule.isActive = !newVal;
+    toast.error('Gagal mengubah status jadwal');
+  }
+};
+
+// Delete Schedule
+const deleteSchedule = async (jobName: string) => {
+  if (!confirm(`Apakah Anda yakin ingin menghapus jadwal untuk "${jobName}"?`))
+    return;
+
+  try {
+    await jobsService.deleteSchedule(jobName);
+    toast.success('Jadwal berhasil dihapus');
+    fetchSchedules();
+  } catch (err: any) {
+    toast.error('Gagal menghapus jadwal', {
+      description: err.response?.data?.message || 'Error Server',
+    });
+  }
+};
+
 const openAddDialog = () => {
   dialogMode.value = 'create';
   editForm.value = {
     jobName: '',
     cron: '',
     description: '',
+    isActive: true,
   };
+  // Refresh job list saat buka dialog create
+  fetchAvailableJobs();
   isDialogOpen.value = true;
 };
 
-// Open Dialog for Edit
 const openEditDialog = (schedule: JobSchedule) => {
   dialogMode.value = 'edit';
   editForm.value = {
-    jobName: schedule.jobName, // Readonly in edit mode
+    jobName: schedule.jobName,
     cron: schedule.cronExpression,
     description: schedule.description || '',
+    isActive: schedule.isActive,
   };
   isDialogOpen.value = true;
 };
@@ -191,11 +216,11 @@ const saveSchedule = async () => {
 
   isUpdatingSchedule.value = true;
   try {
-    // Endpoint PUT menghandle create & update (Upsert)
     await jobsService.updateSchedule({
       jobName: editForm.value.jobName,
       cronExpression: editForm.value.cron,
       description: editForm.value.description,
+      isActive: editForm.value.isActive, // Kirim status aktif saat create/update full
     });
 
     toast.success(
@@ -208,18 +233,44 @@ const saveSchedule = async () => {
   } catch (err: any) {
     toast.error('Gagal menyimpan jadwal', {
       description:
-        err.response?.status != 500
-          ? err.response?.data?.message
-          : 'Pastikan Cron Expression Valid',
+        err.response?.data?.message || 'Pastikan Cron Expression Valid',
     });
   } finally {
     isUpdatingSchedule.value = false;
   }
 };
 
+// Formatters
+const formatDate = (dateStr?: string) => {
+  if (!dateStr) return '-';
+  return new Date(dateStr).toLocaleString('id-ID', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+};
+
+const getStatusBadge = (status: string) => {
+  switch (status) {
+    case 'success':
+      return 'bg-green-500 hover:bg-green-600';
+    case 'failed':
+      return 'bg-red-500 dark:bg-red-600';
+    case 'running':
+      return 'bg-blue-500 hover:bg-blue-600 animate-pulse';
+    case 'pending':
+      return 'secondary';
+    default:
+      return 'outline';
+  }
+};
+
 onMounted(() => {
   fetchLogs();
   fetchSchedules();
+  fetchAvailableJobs();
 });
 </script>
 
@@ -237,7 +288,7 @@ onMounted(() => {
       <Button
         @click="triggerJob('full-sync-and-aggregate')"
         :disabled="isRunningJob"
-        class="shadow-lg shadow-primary/20"
+        class="shadow-lg shadow-primary/20 cursor-pointer"
       >
         <Play class="w-4 h-4 mr-2" :class="{ hidden: isRunningJob }" />
         <Loader2 v-if="isRunningJob" class="w-4 h-4 mr-2 animate-spin" />
@@ -245,15 +296,106 @@ onMounted(() => {
       </Button>
     </div>
 
-    <Tabs default-value="history" class="w-full">
+    <Tabs default-value="manual" class="w-full">
       <TabsList class="mb-4">
-        <TabsTrigger value="history" class="flex items-center gap-2">
+        <TabsTrigger
+          value="manual"
+          class="flex items-center gap-2 cursor-pointer"
+        >
+          <List class="w-4 h-4" /> Daftar Job
+        </TabsTrigger>
+        <TabsTrigger
+          value="history"
+          class="flex items-center gap-2 cursor-pointer"
+        >
           <History class="w-4 h-4" /> Riwayat Eksekusi
         </TabsTrigger>
-        <TabsTrigger value="schedule" class="flex items-center gap-2">
+        <TabsTrigger
+          value="schedule"
+          class="flex items-center gap-2 cursor-pointer"
+        >
           <CalendarClock class="w-4 h-4" /> Penjadwalan (Cron)
         </TabsTrigger>
       </TabsList>
+
+      <TabsContent value="manual">
+        <Card>
+          <CardHeader>
+            <div class="flex items-center justify-between">
+              <div>
+                <CardTitle>Daftar Job Tersedia</CardTitle>
+                <CardDescription>
+                  Semua job yang terdaftar di sistem backend dan dapat
+                  dijalankan secara manual.
+                </CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                @click="fetchAvailableJobs"
+                class="cursor-pointer"
+              >
+                <RefreshCw
+                  class="w-4 h-4"
+                  :class="{ 'animate-spin': isLoadingLogs }"
+                />
+                Refresh List
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div class="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Job Name</TableHead>
+                    <TableHead>Kategori</TableHead>
+                    <TableHead class="text-right">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow v-if="availableJobs.length === 0">
+                    <TableCell
+                      colspan="3"
+                      class="h-24 text-center text-muted-foreground"
+                    >
+                      Tidak ada job yang ditemukan.
+                    </TableCell>
+                  </TableRow>
+                  <TableRow v-for="jobName in availableJobs" :key="jobName">
+                    <TableCell class="font-medium font-mono text-sm">
+                      {{ jobName }}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" v-if="jobName.includes('sync')">
+                        ETL Sync
+                      </Badge>
+                      <Badge
+                        variant="outline"
+                        v-else-if="jobName.includes('aggregate')"
+                        >Aggregation</Badge
+                      >
+                      <Badge variant="default" v-else>Job</Badge>
+                    </TableCell>
+                    <TableCell class="text-right">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        class="cursor-pointer"
+                        @click="triggerJob(jobName)"
+                        :disabled="isRunningJob"
+                      >
+                        <Play class="w-4 h-4 mr-2 text-green-600" />
+                        Run Manual
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
 
       <TabsContent value="history">
         <Card>
@@ -267,14 +409,16 @@ onMounted(() => {
               </div>
               <Button
                 variant="outline"
-                size="icon"
+                size="sm"
                 @click="fetchLogs(pagination.page)"
                 :disabled="isLoadingLogs"
+                class="cursor-pointer"
               >
                 <RefreshCw
                   class="w-4 h-4"
                   :class="{ 'animate-spin': isLoadingLogs }"
                 />
+                Refresh List
               </Button>
             </div>
           </CardHeader>
@@ -373,20 +517,22 @@ onMounted(() => {
                 </CardDescription>
               </div>
               <div class="flex items-center gap-2">
-                <Button size="sm" @click="openAddDialog">
+                <Button size="sm" @click="openAddDialog" class="cursor-pointer">
                   <Plus class="w-4 h-4 mr-2" />
                   Tambah Jadwal
                 </Button>
                 <Button
                   variant="outline"
-                  size="icon"
+                  size="sm"
                   @click="fetchSchedules"
                   :disabled="isLoadingSchedules"
+                  class="cursor-pointer"
                 >
                   <RefreshCw
                     class="w-4 h-4"
                     :class="{ 'animate-spin': isLoadingSchedules }"
                   />
+                  Refresh List
                 </Button>
               </div>
             </div>
@@ -397,6 +543,7 @@ onMounted(() => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Job Name</TableHead>
+                    <TableHead class="w-25">Aktif</TableHead>
                     <TableHead>Cron Expression</TableHead>
                     <TableHead>Deskripsi</TableHead>
                     <TableHead class="text-right">Aksi</TableHead>
@@ -405,6 +552,16 @@ onMounted(() => {
                 <TableBody>
                   <TableRow v-for="sch in schedules" :key="sch.id">
                     <TableCell class="font-medium">{{ sch.jobName }}</TableCell>
+
+                    <TableCell>
+                      <Switch
+                        :modelValue="!!sch.isActive"
+                        @update:modelValue="
+                          (val) => toggleScheduleStatus(sch, val)
+                        "
+                      />
+                    </TableCell>
+
                     <TableCell>
                       <code
                         class="bg-muted px-2 py-1 rounded text-sm font-mono"
@@ -413,8 +570,8 @@ onMounted(() => {
                     </TableCell>
                     <TableCell>{{ sch.description || '-' }}</TableCell>
                     <TableCell class="text-right">
-                      <div class="flex justify-end gap-2">
-                        <Button
+                      <div class="flex justify-end gap-1">
+                        <!-- <Button
                           variant="ghost"
                           size="icon"
                           title="Jalankan Job Ini"
@@ -422,15 +579,26 @@ onMounted(() => {
                           :disabled="isRunningJob"
                         >
                           <Play class="w-4 h-4 text-green-600" />
+                        </Button> -->
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="Edit Jadwal"
+                          @click="openEditDialog(sch)"
+                          class="cursor-pointer"
+                        >
+                          <Pencil class="w-4 h-4 text-blue-600" />
                         </Button>
 
                         <Button
-                          variant="secondary"
-                          size="sm"
-                          @click="openEditDialog(sch)"
-                          class="text-primary dark:text-muted font-semibold"
+                          variant="ghost"
+                          size="icon"
+                          title="Hapus Jadwal"
+                          @click="deleteSchedule(sch.jobName)"
+                          class="cursor-pointer"
                         >
-                          <Pencil class="w-3.5 h-3.5 mr-2" /> Edit
+                          <Trash2 class="w-4 h-4 text-red-600" />
                         </Button>
                       </div>
                     </TableCell>
@@ -456,7 +624,7 @@ onMounted(() => {
           <DialogDescription>
             {{
               dialogMode === 'create'
-                ? 'Pilih job dan atur jadwal cron.'
+                ? 'Pilih job dari sistem dan atur jadwal cron.'
                 : 'Ubah konfigurasi waktu eksekusi job ini.'
             }}
           </DialogDescription>
@@ -472,11 +640,11 @@ onMounted(() => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem
-                  v-for="option in JOB_NAME_OPTIONS"
-                  :key="option.value"
-                  :value="option.value"
+                  v-for="job in availableJobs"
+                  :key="job"
+                  :value="job"
                 >
-                  {{ option.label }}
+                  {{ job }}
                 </SelectItem>
               </SelectContent>
             </Select>
