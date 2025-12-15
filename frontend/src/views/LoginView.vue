@@ -71,15 +71,19 @@ const handleLogin = async () => {
     <Card class="w-full max-w-md shadow-lg border-t-4 border-t-primary">
       <CardHeader class="space-y-1 text-center">
         <CardTitle class="text-2xl font-bold text-primary">
-          Polban DataCore
+          Polban <span class="text-secondary">DataCore</span>
         </CardTitle>
         <CardDescription> Masuk untuk mengelola agregasi data </CardDescription>
       </CardHeader>
 
       <CardContent>
         <form @submit.prevent="handleLogin" class="space-y-4">
-          <Alert v-if="errorMessage" variant="destructive">
-            <AlertCircle class="h-4 w-4" />
+          <Alert
+            v-if="errorMessage"
+            variant="destructive"
+            class="border-red-200 dark:border-red-500/50 text-red-500"
+          >
+            <AlertCircle class="h-4 w-4 stroke-red-500" />
             <AlertTitle>Gagal Masuk</AlertTitle>
             <AlertDescription>
               {{ errorMessage }}
